@@ -1,6 +1,6 @@
 {
     "name": "fize/workflow",
-    "description": "An easy to extend, easy to invoke, developer-oriented workflow framework. produced by FizeChan.",
+    "description": "An easy to extend, easy to invoke, developer-oriented workflow framework.",
     "license": "Apache-2.0",
     "authors": [
         {
@@ -10,7 +10,7 @@
     ],
     "require": {
 		"php": ">=7.0.0",
-		"fize/db": "*@dev"
+		"fize/db": "~2.1"
 	},
 	"autoload": {
         "psr-4": {
