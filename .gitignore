@@ -1,3 +1,6 @@
 /vendor/
 /.idea
 /composer.lock
+/tests/data
+/.phpunit.result.cache
+/temp
