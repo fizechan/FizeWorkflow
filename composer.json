@@ -1,23 +1,23 @@
 {
-    "name": "fize/workflow",
-    "description": "一个易于扩展、易于调用、面向开发人员的工作流框架。",
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "FizeChan",
-            "email": "chenfengzhan@qq.com"
-        }
-    ],
-    "require": {
-		"php": ">=7.0.0",
-		"fize/db": "~2.5"
-	},
-	"require-dev": {
-        "phpunit/phpunit": "^8.0.0"
-    },
-	"autoload": {
-        "psr-4": {
-            "fize\\workflow\\": "src"
-        }
+  "name": "fize/workflow",
+  "description": "一个易于扩展、易于调用、面向开发人员的工作流框架。",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "FizeChan",
+      "email": "chenfengzhan@qq.com"
     }
+  ],
+  "require": {
+    "php": ">=7.0.0",
+    "fize/db": "~2.5"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "~9.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "fize\\workflow\\": "src"
+    }
+  }
 }
