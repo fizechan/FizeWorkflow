@@ -6,7 +6,7 @@ namespace fize\workflow;
 /**
  * 表单字段定义
  */
-class FormField
+class Field
 {
 
     /**
@@ -54,6 +54,7 @@ class FormField
 
             // 自定义
             'editor' => '编辑器',
+            'file' => '文件上传',
             'files' => '多文件上传',
             'image' => '图片上传',
             'images' => '多图片上传'
