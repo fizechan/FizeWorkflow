@@ -7,6 +7,6 @@ namespace fize\workflow;
 /**
  * 实例
  */
-class Instance extends Common
+class Instance extends Workflow
 {
 }

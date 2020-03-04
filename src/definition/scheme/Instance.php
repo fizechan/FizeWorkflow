@@ -9,6 +9,7 @@ use util\workflow\model\Operation;
 
 /**
  * 方案实例化
+ * @todo 待删除
  */
 trait Instance
 {

@@ -7,6 +7,7 @@ use think\Db;
 
 /**
  * 方案分配
+ * @todo 待删除
  */
 trait Distribute
 {
