@@ -6,6 +6,7 @@ namespace fize\workflow\model;
 use RuntimeException;
 use fize\crypt\Json;
 use fize\misc\Preg;
+use fize\workflow\Db;
 use util\workflow\definition\Scheme;
 
 /**
@@ -54,28 +55,28 @@ class Instance
      * @param int $scheme_id 方案ID
      * @return int 实例ID
      */
-    public static function create($name, $scheme_id, array $fields, $original_instance_id = null)
+    public static function create($name, $scheme_id, $fields, $original_instance_id = null)
     {
-        self::db()->startTrans();
+        Db::startTrans();
 
         $data_instance = [
             'scheme_id' => $scheme_id,
             'name'      => $name,
-            'status'    => \fize\workflow\Instance::STATUS_EXECUTING,
+            'status'    => Instance::STATUS_EXECUTING,
             'is_finish' => 0
         ];
 
-        $instance_id = self::db('workflow_instance')->insertGetId($data_instance);
+        $instance_id = Db::table('workflow_instance')->insertGetId($data_instance);
 
         foreach ($fields as $n => $v) {
-            $field = self::db('workflow_scheme_field')->where(['scheme_id' => $scheme_id, 'name' => $n])->find();
+            $field = Db::table('workflow_scheme_field')->where(['scheme_id' => $scheme_id, 'name' => $n])->find();
             if ($field['is_required'] && $v === "") {
-                self::db()->rollback();
+                Db::rollback();
                 throw new RuntimeException("字段{$n}必须填写");
             }
             if ($field['regex_match']) {
                 if (!Preg::match($field['regex_match'], $v)) {
-                    self::db()->rollback();
+                    Db::rollback();
                     throw new RuntimeException("字段{$n}不符合规则");
                 }
             }
@@ -85,15 +86,15 @@ class Instance
                 'name'        => $n,
                 'value'       => $v
             ];
-            self::db('workflow_instance_field')->insert($data_instance_field);
+            Db::table('workflow_instance_field')->insert($data_instance_field);
         }
 
         if ($original_instance_id) {
             $contrasts = self::getContrasts($instance_id, $original_instance_id);
-            self::db('workflow_instance')->where(['id' => $instance_id])->update(['contrasts' => Json::encode($contrasts)]);
+            Db::table('workflow_instance')->where(['id' => $instance_id])->update(['contrasts' => Json::encode($contrasts)]);
         }
 
-        self::db()->commit();
+        Db::commit();
 
         return $instance_id;
     }
@@ -168,6 +169,7 @@ class Instance
 
     /**
      *  取得实例当前的流程状态
+     * @todo 待修改
      * @param int $id 实例ID
      * @return array
      */
@@ -225,6 +227,7 @@ class Instance
 
     /**
      * 绑定外部关联ID
+     * @todo 待修改
      * @param int $instance_id 工作流实例ID
      * @param string $extend_relation 外部关联字段值
      */

@@ -19,4 +19,9 @@ class Workflow
         $db_mode = isset($config['db']['mode']) ? $config['db']['mode'] : null;
         new Db($db_type, $db_config, $db_mode);
     }
+
+    public static function initialize()
+    {
+
+    }
 }
