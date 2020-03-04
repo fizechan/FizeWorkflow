@@ -16,6 +16,12 @@ interface SchemeInterface
     public function __construct($instance_id);
 
     /**
+     * 开始
+     * @return mixed
+     */
+    public function start();
+
+    /**
      * 审批通过
      * @return bool 成功返回true，失败返回false
      */
@@ -74,17 +80,8 @@ interface SchemeInterface
 
     /**
      * 再次分配最后执行节点
-     * @param bool $org_user 是否分配给原操作者，默认true
+     * @param bool $original_user 是否分配给原操作者，默认true
      * @return mixed 成功返回插入的记录ID，失败返回false
      */
-    public function again($org_user = true);
-
-    /**
-     * 创建
-     * @param string $name 方案名称
-     * @param string $class 指定方案逻辑处理类
-     * @param string $type 方案类型
-     * @return int 方案ID
-     */
-    public static function create($name, $class = null, $type = null);
+    public function again($original_user = true);
 }
