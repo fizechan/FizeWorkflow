@@ -7,6 +7,7 @@ use RuntimeException;
 use fize\crypt\Json;
 use fize\misc\Preg;
 use fize\workflow\Db;
+use fize\workflow\Field;
 use util\workflow\definition\Scheme;
 
 /**
@@ -55,7 +56,7 @@ class Instance
      * @param int $scheme_id 方案ID
      * @return int 实例ID
      */
-    public static function create($name, $scheme_id, $fields, $original_instance_id = null)
+    public static function submit($name, $scheme_id, $fields, $instance_id = null)
     {
         Db::startTrans();
 
@@ -97,6 +98,22 @@ class Instance
         Db::commit();
 
         return $instance_id;
+
+        $scheme = Db::name('workflow_scheme')->where('id', '=', $scheme_id)->find();
+        self::$scheme = new $scheme['class']();
+
+        if ($instance_id) {  //退回的再次提交
+            $contrast_id = self::$scheme->instanceContrast($instance_id, $form, $attachs);
+            self::$scheme->reset($instance_id, $contrast_id);
+        } else {  //首次提交
+            $instance_id = self::$scheme->instance($instance_name, $scheme_id);
+            $contrast_id = self::$scheme->instanceContrast($instance_id, $form, $attachs);
+            if ($beforeDone) {
+                $beforeDone();
+            }
+            self::$scheme->instanceDone($instance_id, $contrast_id);
+        }
+        return ['instance_id' => $instance_id, 'contrast_id' => $contrast_id];
     }
 
     /**
@@ -123,40 +140,6 @@ class Instance
             }
         }
         return $contrasts;
-    }
-
-    /**
-     * 返回表单字段
-     * @param int $instance_id 实例ID
-     * @param bool $with_value 是否附带值
-     * @param bool $key_name 是否将name作为键名
-     * @return array
-     */
-    public static function getFields($instance_id, $with_value = true, $key_name = false)
-    {
-        $instance = self::db('workflow_instance')->where(['id' => $instance_id])->find();
-        $fields = self::db('workflow_scheme_field')->where(['scheme_id' => $instance['scheme_id']])->order("sort ASC")->select();
-        if ($with_value) {
-            $values = self::db('workflow_instance_field')->where(['instance_id' => $instance_id])->select();
-            foreach ($fields as $index => $field) {
-                foreach ($values as $value) {
-                    if ($value['name'] == $field['name']) {
-                        $fields[$index]['value'] = $value['value'];
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (!$key_name) {
-            return $fields;
-        }
-
-        $items = [];
-        foreach ($fields as $field) {
-            $items[$field['name']] = $field;
-        }
-        return $items;
     }
 
 
@@ -247,7 +230,7 @@ class Instance
      * @param int $instance_id 实例ID，指定该参数时表示重新提交
      * @return array ['instance_id' => $val, 'contrast_id' => $val]
      */
-    public static function submit($scheme_id, array $form, array $attachs = null, callable $beforeDone = null, $instance_name = '', $instance_id = null)
+    public static function submit2($scheme_id, array $form, array $attachs = null, callable $beforeDone = null, $instance_name = '', $instance_id = null)
     {
         $scheme = Db::name('workflow_scheme')->where('id', '=', $scheme_id)->find();
         self::$scheme = new $scheme['class']();

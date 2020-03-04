@@ -3,7 +3,9 @@
 
 namespace fize\workflow\model;
 
+use fize\crypt\Json;
 use fize\workflow\Db;
+use fize\workflow\Field;
 use fize\workflow\Scheme as WorkflowScheme;
 
 /**
@@ -33,13 +35,32 @@ class Scheme
     }
 
     /**
-     * 返回表单字段
+     * 返回定义的表单字段
      * @param int $scheme_id 方案ID
-     * @return array
+     * @return Field[]
      */
     public static function getFields($scheme_id)
     {
-        return Db::table('workflow_scheme_field')->where(['scheme_id' => $scheme_id])->order("sort ASC")->select();
+        $rows = Db::table('workflow_scheme_field')->where(['scheme_id' => $scheme_id])->order(['sort' => 'ASC', 'create_time' => 'ASC'])->select();
+        $fields = [];
+        foreach ($rows as $row) {
+            $field = new Field();
+
+            $field->title = $row['title'];
+            $field->name = $row['name'];
+            $field->type = $row['type'];
+            $field->isRequired = (int)$row['is_required'];
+            $field->regexMatch = $row['regex_match'];
+            $field->preload = $row['preload'];
+            $field->value = $row['value'];
+            $field->hint = $row['hint'];
+            $field->attrs = $row['attrs'] ? Json::decode($row['attrs']) : null;
+            $field->extend = $row['extend'] ? Json::decode($row['extend']) : null;
+            $field->sort = $row['sort'];
+
+            $fields[] = $field;
+        }
+        return $fields;
     }
 
     /**

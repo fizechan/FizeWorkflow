@@ -4,7 +4,7 @@
 namespace fize\workflow;
 
 
-class Operation
+class Node
 {
 
 }
