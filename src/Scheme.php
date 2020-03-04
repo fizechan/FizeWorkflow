@@ -38,39 +38,6 @@ class Scheme implements SchemeInterface
     }
 
     /**
-     * 开始
-     * @param int $instance_id 实例ID
-     */
-    public static function start($instance_id)
-    {
-        $instance = Db::table('workflow_instance')->where(['id' => $instance_id])->find();
-        $map = [
-            ['scheme_id', '=', $instance['scheme_id']],
-            ['level', '=', 1]
-        ];
-        $lv1nodes = Db::table('workflow_node')->where($map)->select();
-        foreach ($lv1nodes as $lv1node) {
-            /**
-             * @var NodeInterface $node
-             */
-            $node = $lv1node['class'];
-            if ($node::access($instance_id, 0, $lv1node['id'])) {
-                $node::create($contrast_id, $lv1node['id']);
-            }
-        }
-    }
-
-    /**
-     * 重置到最开始节点
-     * @param int $instance_id 实例ID
-     * @param int $submit_id 提交ID，不指定则为原提交ID
-     */
-    public static function reset($instance_id, $submit_id = null)
-    {
-        // TODO: Implement reset() method.
-    }
-
-    /**
      * 审批通过
      * @param int $instance_id 实例ID
      */

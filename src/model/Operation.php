@@ -1,13 +1,10 @@
 <?php
 
 
-namespace util\workflow\model;
+namespace fize\workflow\model;
 
-use think\Db;
-use think\facade\Log;
-use util\workflow\definition\Node;
-use util\workflow\definition\Scheme;
-use think\facade\Cache;
+use fize\workflow\Db;
+use fize\workflow\NodeInterface;
 
 /**
  * 模型：操作记录
@@ -58,6 +55,62 @@ class Operation
      * 操作：取消
      */
     const ACTION_TYPE_CANCEL = 8;
+
+    /**
+     * 创建操作
+     * @param int $submit_id 提交ID
+     * @param int $node_id 节点ID
+     * @param int $user_id 用户ID
+     * @param bool $notice 是否发送提醒
+     * @return int 返回操作ID
+     */
+    public static function create($submit_id, $node_id, $user_id = null, $notice = true)
+    {
+        $instance_id = Db::table('workflow_submit')->where(['id' => $submit_id])->value('instance_id');
+        $node = Db::table('workflow_node')->where(['id' => $node_id])->find();
+        $data = [
+            'scheme_id'       => $node['scheme_id'],
+            'instance_id'     => $instance_id,
+            'submit_id'       => $submit_id,
+            'user_id'         => $user_id,
+            'node_id'         => $node['id'],
+            'node_name'       => $node['name'],
+            'create_time'     => date('Y-m-d H:i:s'),
+            'distribute_time' => date('Y-m-d H:i:s')
+        ];
+        $operation_id = Db::table('workflow_operation')->insertGetId($data);
+        self::ignoreBefore($operation_id);
+        if ($user_id && $notice) {
+            /**
+             * @var NodeInterface $node_class
+             */
+            $node_class = $node['class'];
+            $node_class::notice($operation_id);
+        }
+        return $operation_id;
+    }
+
+    /**
+     * 对指定操作ID相关的之前操作节点进行无需操作处理
+     * @param int $operation_id 操作ID
+     */
+    protected static function ignoreBefore($operation_id)
+    {
+        $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
+        $map = [
+            'instance_id' => ['=', $operation['instance_id']],
+            'create_time' => ['<', $operation['create_time']],
+            'action_type' => ['=', Operation::ACTION_TYPE_UNEXECUTED]
+        ];
+        $data = [
+            'action_id'   => 0,
+            'action_name' => '无需操作',
+            'action_type' => Operation::ACTION_TYPE_DISUSE,
+            'action_time' => date('Y-m-d H:i:s')
+        ];
+        Db::table('workflow_operation')->where($map)->update($data);
+    }
+
 
     /**
      * @var Node

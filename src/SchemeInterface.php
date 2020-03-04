@@ -21,19 +21,6 @@ interface SchemeInterface
     public static function getSubmitContrasts($fields, $original_fields);
 
     /**
-     * 开始
-     * @param int $instance_id 实例ID
-     */
-    public static function start($instance_id);
-
-    /**
-     * 重置到最开始节点
-     * @param int $instance_id 实例ID
-     * @param int $submit_id 提交ID，不指定则为原提交ID
-     */
-    public static function reset($instance_id, $submit_id = null);
-
-    /**
      * 审批通过
      * @param int $instance_id 实例ID
      */

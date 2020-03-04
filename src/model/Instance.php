@@ -3,10 +3,13 @@
 
 namespace fize\workflow\model;
 
+
 use RuntimeException;
 use fize\crypt\Json;
 use fize\misc\Preg;
 use fize\workflow\Db;
+use fize\workflow\SchemeInterface;
+use fize\workflow\NodeInterface;
 use util\workflow\definition\Scheme;
 
 /**
@@ -55,20 +58,31 @@ class Instance
      * @param int $scheme_id 方案ID
      * @param array $fields 传入的表单参数数组
      * @param int $instance_id 实例ID，指定该参数时表示重新提交
-     * @return int 实例ID
+     * @return array ['instance_id' => $instance_id, 'submit_id' => $submit_id]
      */
     public static function submit($name, $scheme_id, $fields, $instance_id = null)
     {
         Db::startTrans();
 
-        $data_instance = [
-            'scheme_id' => $scheme_id,
-            'name'      => $name,
-            'status'    => Instance::STATUS_EXECUTING,
-            'is_finish' => 0
-        ];
+        if ($instance_id) {  //再次提交
+            $submit_times = Db::table('workflow_submit')->where(['instance_id' => $instance_id])->count() + 1;
+        } else {  //首次提交
+            $submit_times = 1;
 
-        $instance_id = Db::table('workflow_instance')->insertGetId($data_instance);
+            $data_instance = [
+                'scheme_id' => $scheme_id,
+                'name'      => $name,
+                'status'    => Instance::STATUS_EXECUTING,
+                'is_finish' => 0
+            ];
+            $instance_id = Db::table('workflow_instance')->insertGetId($data_instance);
+        }
+
+        $data_submit = [
+            'instance_id' => $instance_id,
+            'create_time' => date('Y-m-d H:i:s')
+        ];
+        $submit_id = Db::table('workflow_submit')->insertGetId($data_submit);
 
         foreach ($fields as $n => $v) {
             $field = Db::table('workflow_scheme_field')->where(['scheme_id' => $scheme_id, 'name' => $n])->find();
@@ -83,39 +97,40 @@ class Instance
                 }
             }
 
-            $data_instance_field = [
-                'instance_id' => $instance_id,
-                'name'        => $n,
-                'value'       => $v
+            $data_submit_field = [
+                'submit_id' => $submit_id,
+                'name'      => $n,
+                'value'     => $v
             ];
-            Db::table('workflow_instance_field')->insert($data_instance_field);
+            Db::table('workflow_submit_field')->insert($data_submit_field);
         }
 
-        if ($original_instance_id) {
-            $contrasts = self::getContrasts($instance_id, $original_instance_id);
-            Db::table('workflow_instance')->where(['id' => $instance_id])->update(['contrasts' => Json::encode($contrasts)]);
-        }
+        //产生operation
+        $data_operation = [
+            'scheme_id'       => $scheme_id,
+            'instance_id'     => $instance_id,
+            'submit_id'       => $submit_id,
+            'user_id'         => 0,  //0代表系统操作
+            'node_id'         => 0,  //0代表非实际节点
+            'node_name'       => '提交',
+            'create_time'     => date('Y-m-d H:i:s'),
+            'distribute_time' => date('Y-m-d H:i:s'),
+            'action_id'       => 0,
+            'action_name'     => "第{$submit_times}次提交",
+            'action_type'     => Operation::ACTION_TYPE_SUBMIT,
+            'action_time'     => date('Y-m-d H:i:s')
+        ];
+        Db::table('workflow_operation')->insert($data_operation);
 
         Db::commit();
 
-        return $instance_id;
-
-        $scheme = Db::name('workflow_scheme')->where('id', '=', $scheme_id)->find();
-        self::$scheme = new $scheme['class']();
-
-        if ($instance_id) {  //退回的再次提交
-            $contrast_id = self::$scheme->instanceContrast($instance_id, $form, $attachs);
-            self::$scheme->reset($instance_id, $contrast_id);
-        } else {  //首次提交
-            $instance_id = self::$scheme->instance($instance_name, $scheme_id);
-            $contrast_id = self::$scheme->instanceContrast($instance_id, $form, $attachs);
-            if ($beforeDone) {
-                $beforeDone();
-            }
-            self::$scheme->instanceDone($instance_id, $contrast_id);
+        if ($submit_times == 1) {
+            self::start($instance_id);
+        } else {
+            self::reset($instance_id, $submit_id);
         }
 
-        return ['instance_id' => $instance_id, 'contrast_id' => $contrast_id];
+        return ['instance_id' => $instance_id, 'submit_id' => $submit_id];
     }
 
     /**
@@ -124,25 +139,86 @@ class Instance
      */
     public static function start($instance_id)
     {
-
+        $submit_id = Db::table('workflow_submit')->where(['instance_id' => $instance_id])->value('id');
+        $instance = Db::table('workflow_instance')->where(['id' => $instance_id])->find();
+        $map = [
+            ['scheme_id', '=', $instance['scheme_id']],
+            ['level', '=', 1]
+        ];
+        $lv1nodes = Db::table('workflow_node')->where($map)->select();
+        foreach ($lv1nodes as $lv1node) {
+            /**
+             * @var NodeInterface $node
+             */
+            $node = $lv1node['class'];
+            if ($node::access($instance_id, 0, $lv1node['id'])) {
+                Operation::create($submit_id, $lv1node['id']);
+            }
+        }
     }
 
     /**
-     * 实例重置到最开始节点
+     * 重置到最开始节点
      * @param int $instance_id 实例ID
-     * @param int $contrast_id 指定提交ID，不指定则为原提交ID
-     * @return array [$result, $errmsg]
+     * @param int $submit_id 提交ID，不指定则为原提交ID
      */
-    public static function reset($instance_id, $contrast_id = null)
+    public static function reset($instance_id, $submit_id = null)
     {
-        $scheme_id = Db::name('workflow_instance')->where('id', '=', $instance_id)->value('scheme_id');
-        $scheme = Db::name('workflow_scheme')->where('id', '=', $scheme_id)->find();
-        self::$scheme = new $scheme['class']();
-        $result = self::$scheme->reset($instance_id, $contrast_id);
-        return [$result, self::$scheme->getLastErrMsg()];
+        Db::startTrans();
+        try {
+            //忽略之前所有未操作
+            $map = [
+                ['instance_id', '=', $instance_id],
+                ['action_type', '=', Operation::ACTION_TYPE_UNEXECUTED]
+            ];
+            $data = [
+                'action_id'   => 0,
+                'action_name' => '无需操作',
+                'action_type' => Operation::ACTION_TYPE_DISUSE,
+                'action_time' => date('Y-m-d H:i:s')
+            ];
+            Db::table('workflow_operation')->where($map)->update($data);
+
+            if (is_null($submit_id)) {
+                $submit_id = Db::table('workflow_submit')->where(['instance_id' => $instance_id])->order(['create_time' => 'DESC'])->value('id', 0);
+            }
+
+            //更新之前的提交状态为已处理
+            $map = [
+                'instance_id' => ['=', $instance_id],
+                'id'          => ['<>', $submit_id]
+            ];
+            Db::table('workflow_submit')->where($map)->update(['is_finish' => 1]);
+
+            $data_instance = [
+                'status'      => Instance::STATUS_EXECUTING,
+                'is_finish'   => 0,
+                'update_time' => date('Y-m-d H:i:s')
+            ];
+            Db::table('workflow_instance')->where(['id' => $instance_id])->update($data_instance);
+
+            Db::commit();
+
+            $instance = Db::table('workflow_instance')->where(['id' => $instance_id])->find();
+            $map = [
+                ['scheme_id', '=', $instance['scheme_id']],
+                ['level', '=', 1]
+            ];
+            $lv1nodes = Db::table('workflow_node')->where($map)->select();
+            foreach ($lv1nodes as $lv1node) {
+                /**
+                 * @var NodeInterface $node
+                 */
+                $node = $lv1node['class'];
+                if ($node::access($instance_id, 0, $lv1node['id'])) {
+                    Operation::create($submit_id, $lv1node['id']);
+                }
+            }
+        } catch (RuntimeException $e) {
+            Db::rollback();
+            throw $e;
+        }
     }
-
-
 
 
     /**
@@ -152,9 +228,9 @@ class Instance
 
     /**
      *  取得实例当前的流程状态
-     * @todo 待修改
      * @param int $id 实例ID
      * @return array
+     * @todo 待修改
      */
     public static function getProcess($id)
     {
@@ -210,43 +286,14 @@ class Instance
 
     /**
      * 绑定外部关联ID
-     * @todo 待修改
      * @param int $instance_id 工作流实例ID
      * @param string $extend_relation 外部关联字段值
+     * @todo 待修改
      */
     public static function bindExtendRelation($instance_id, $extend_relation)
     {
         Db::name('workflow_instance')->where('id', '=', $instance_id)->update(['extend_relation' => $extend_relation]);
         Db::name('workflow_contrast')->where('instance_id', '=', $instance_id)->update(['extend_relation' => $extend_relation]);
-    }
-
-    /**
-     * 提交一个审核实例，含重新提交
-     * @param int $scheme_id 指定方案ID
-     * @param array $form 传入的表单参数数组
-     * @param array $attachs 可选的附件列表
-     * @param callable $beforeDone 实例执行工作流前回调方法
-     * @param string $instance_name 指定实例名，重新提交时该参数无效
-     * @param int $instance_id 实例ID，指定该参数时表示重新提交
-     * @return array ['instance_id' => $val, 'contrast_id' => $val]
-     */
-    public static function submit2($scheme_id, array $form, array $attachs = null, callable $beforeDone = null, $instance_name = '', $instance_id = null)
-    {
-        $scheme = Db::name('workflow_scheme')->where('id', '=', $scheme_id)->find();
-        self::$scheme = new $scheme['class']();
-
-        if ($instance_id) {  //退回的再次提交
-            $contrast_id = self::$scheme->instanceContrast($instance_id, $form, $attachs);
-            self::$scheme->reset($instance_id, $contrast_id);
-        } else {  //首次提交
-            $instance_id = self::$scheme->instance($instance_name, $scheme_id);
-            $contrast_id = self::$scheme->instanceContrast($instance_id, $form, $attachs);
-            if ($beforeDone) {
-                $beforeDone();
-            }
-            self::$scheme->instanceDone($instance_id, $contrast_id);
-        }
-        return ['instance_id' => $instance_id, 'contrast_id' => $contrast_id];
     }
 
     /**
@@ -296,7 +343,6 @@ class Instance
         ];
         Db::name('workflow_instance')->where('id', '=', $instance_id)->update($data_instance);
     }
-
 
 
     /**

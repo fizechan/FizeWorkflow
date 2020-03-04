@@ -19,13 +19,10 @@ interface NodeInterface
     public static function access($instance_id, $prev_operation_id, $node_id);
 
     /**
-     * 创建操作
-     * @param int $contrast_id 提交ID
-     * @param int $node_id 节点ID
-     * @param int $user_id 用户ID
-     * @return int 返回操作ID
+     * 执行通知
+     * @param int $operation_id 操作ID
      */
-    public static function create($contrast_id, $node_id, $user_id = null);
+    public static function notice($operation_id);
 
     /**
      * 分配用户
