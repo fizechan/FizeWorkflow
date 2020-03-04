@@ -7,7 +7,6 @@ use RuntimeException;
 use fize\crypt\Json;
 use fize\misc\Preg;
 use fize\workflow\Db;
-use fize\workflow\Field;
 use util\workflow\definition\Scheme;
 
 /**
@@ -117,6 +116,30 @@ class Instance
         }
 
         return ['instance_id' => $instance_id, 'contrast_id' => $contrast_id];
+    }
+
+    /**
+     * 开始
+     * @param int $instance_id 实例ID
+     */
+    public static function start($instance_id)
+    {
+
+    }
+
+    /**
+     * 实例重置到最开始节点
+     * @param int $instance_id 实例ID
+     * @param int $contrast_id 指定提交ID，不指定则为原提交ID
+     * @return array [$result, $errmsg]
+     */
+    public static function reset($instance_id, $contrast_id = null)
+    {
+        $scheme_id = Db::name('workflow_instance')->where('id', '=', $instance_id)->value('scheme_id');
+        $scheme = Db::name('workflow_scheme')->where('id', '=', $scheme_id)->find();
+        self::$scheme = new $scheme['class']();
+        $result = self::$scheme->reset($instance_id, $contrast_id);
+        return [$result, self::$scheme->getLastErrMsg()];
     }
 
 
@@ -274,20 +297,7 @@ class Instance
         Db::name('workflow_instance')->where('id', '=', $instance_id)->update($data_instance);
     }
 
-    /**
-     * 实例重置到最开始节点
-     * @param int $instance_id 实例ID
-     * @param int $contrast_id 指定提交ID，不指定则为原提交ID
-     * @return array [$result, $errmsg]
-     */
-    public static function reset($instance_id, $contrast_id = null)
-    {
-        $scheme_id = Db::name('workflow_instance')->where('id', '=', $instance_id)->value('scheme_id');
-        $scheme = Db::name('workflow_scheme')->where('id', '=', $scheme_id)->find();
-        self::$scheme = new $scheme['class']();
-        $result = self::$scheme->reset($instance_id, $contrast_id);
-        return [$result, self::$scheme->getLastErrMsg()];
-    }
+
 
     /**
      * 再次分配最后执行节点

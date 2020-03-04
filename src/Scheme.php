@@ -61,6 +61,16 @@ class Scheme implements SchemeInterface
     }
 
     /**
+     * 重置到最开始节点
+     * @param int $instance_id 实例ID
+     * @param int $submit_id 提交ID，不指定则为原提交ID
+     */
+    public static function reset($instance_id, $submit_id = null)
+    {
+        // TODO: Implement reset() method.
+    }
+
+    /**
      * 审批通过
      * @param int $instance_id 实例ID
      */
@@ -116,11 +126,6 @@ class Scheme implements SchemeInterface
     public static function cancel($instance_id)
     {
         // TODO: Implement cancel() method.
-    }
-
-    public static function reset($instance_id, $contrast_id = null)
-    {
-        // TODO: Implement reset() method.
     }
 
     public static function goon($instance_id)
