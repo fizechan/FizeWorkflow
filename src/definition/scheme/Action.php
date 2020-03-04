@@ -74,4 +74,9 @@ trait Action
         Db::name('workflow_instance')->where('id', '=', $instance_id)->update($data);
         return true;
     }
+
+    public function cancel($instance_id)
+    {
+
+    }
 }

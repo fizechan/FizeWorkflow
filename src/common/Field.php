@@ -1,13 +1,33 @@
 <?php
 
 
-namespace fize\workflow;
+namespace fize\workflow\common;
 
 /**
  * 表单字段定义
  */
 class Field
 {
+
+    /**
+     * @var string 显示名
+     */
+    public $title;
+
+    /**
+     * @var string 字段名
+     */
+    public $name;
+
+    /**
+     * @var string 类型
+     */
+    public $type;
+
+    /**
+     * @var int 是否必填
+     */
+    public $isRequired;
 
     /**
      * 全部可用字段类型
@@ -57,7 +77,15 @@ class Field
             'file' => '文件上传',
             'files' => '多文件上传',
             'image' => '图片上传',
-            'images' => '多图片上传'
+            'images' => '多图片上传',
+            'json' => 'JSON格式'
+        ];
+    }
+
+    public function testjson()
+    {
+        $json = [
+
         ];
     }
 }
