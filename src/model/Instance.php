@@ -54,6 +54,8 @@ class Instance
      * 创建
      * @param string $name 名称
      * @param int $scheme_id 方案ID
+     * @param array $fields 传入的表单参数数组
+     * @param int $instance_id 实例ID，指定该参数时表示重新提交
      * @return int 实例ID
      */
     public static function submit($name, $scheme_id, $fields, $instance_id = null)
@@ -113,33 +115,8 @@ class Instance
             }
             self::$scheme->instanceDone($instance_id, $contrast_id);
         }
-        return ['instance_id' => $instance_id, 'contrast_id' => $contrast_id];
-    }
 
-    /**
-     * 返回差异字段
-     *
-     * 通过改写该方法可以进行差异字段定义
-     * @param int $instance_id 实例ID
-     * @param int $original_instance_id 对比实例ID
-     * @return array [$name => ['title' => *, 'type' => *, 'new' => *, 'old' => *]]
-     */
-    protected static function getContrasts($instance_id, $original_instance_id)
-    {
-        $fields = self::getFields($instance_id, true, true);
-        $original_fields = self::getFields($original_instance_id, true, true);
-        $contrasts = [];
-        foreach ($fields as $name => $field) {
-            if ($field['value'] != $original_fields[$name]['value']) {
-                $contrasts[$name] = [
-                    'title' => $field['title'],
-                    'type'  => $field['type'],
-                    'new'   => $field['value'],
-                    'old'   => $original_fields[$name]['value']
-                ];
-            }
-        }
-        return $contrasts;
+        return ['instance_id' => $instance_id, 'contrast_id' => $contrast_id];
     }
 
 
