@@ -5,7 +5,7 @@ namespace fize\workflow;
 
 
 /**
- * 方案
+ * 内置方案
  */
 class Scheme implements SchemeInterface
 {

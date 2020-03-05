@@ -1,9 +1,9 @@
 <?php
 
 
-namespace util\workflow\model;
+namespace fize\workflow\model;
 
-use think\Db;
+use fize\workflow\Db;
 
 /**
  * 节点
