@@ -355,7 +355,7 @@ EOF;
     public static function getNodeActions($operation_id)
     {
         $operation = Db::name('workflow_operation')->where('id', '=', $operation_id)->find();
-        return NodeAction::getList($operation['node_id']);
+        return Action::getList($operation['node_id']);
     }
 
     /**

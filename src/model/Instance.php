@@ -10,6 +10,7 @@ use fize\workflow\NodeInterface;
 
 /**
  * 实例
+ *
  * 【实例】是【方案】的实例化表现
  */
 class Instance
