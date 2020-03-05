@@ -1,19 +1,16 @@
 <?php
 
-
 namespace fize\workflow\model;
 
-
 use RuntimeException;
-use fize\crypt\Json;
 use fize\misc\Preg;
 use fize\workflow\Db;
 use fize\workflow\SchemeInterface;
 use fize\workflow\NodeInterface;
-use util\workflow\definition\Scheme;
 
 /**
  * 实例
+ * 【实例】是【方案】的实例化表现
  */
 class Instance
 {
@@ -220,30 +217,230 @@ class Instance
         }
     }
 
+    /**
+     * 审批通过
+     * @param int $instance_id 方案实例ID
+     */
+    public static function adopt($instance_id)
+    {
+        $data_instance = [
+            'status'    => Instance::STATUS_ADOPT,
+            'is_finish' => 1
+        ];
+        Db::table('workflow_instance')->where(['id' => $instance_id])->update($data_instance);
+
+        $scheme_id = Db::table('workflow_instance')->where(['id' => $instance_id])->value('scheme_id');
+        $scheme = Db::table('workflow_scheme')->where(['id' => $scheme_id])->find();
+        /**
+         * @var SchemeInterface $scheme_class
+         */
+        $scheme_class = $scheme['class'];
+        $scheme_class::adopt($instance_id);
+    }
 
     /**
-     * @var Scheme
+     * 审批否决
+     * @param int $instance_id 实例ID
      */
-    private static $scheme;
+    public static function reject($instance_id)
+    {
+        $data = [
+            'status'    => Instance::STATUS_REJECT,
+            'is_finish' => 1
+        ];
+        Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
+
+        $scheme_id = Db::table('workflow_instance')->where(['id' => $instance_id])->value('scheme_id');
+        $scheme = Db::table('workflow_scheme')->where(['id' => $scheme_id])->find();
+        /**
+         * @var SchemeInterface $scheme_class
+         */
+        $scheme_class = $scheme['class'];
+        $scheme_class::reject($instance_id);
+    }
+
+    /**
+     * 审批退回
+     * @param int $instance_id 实例ID
+     */
+    public static function goback($instance_id)
+    {
+        $data = [
+            'status'    => Instance::STATUS_GOBACK,
+            'is_finish' => 0
+        ];
+        Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
+
+        $scheme_id = Db::table('workflow_instance')->where(['id' => $instance_id])->value('scheme_id');
+        $scheme = Db::table('workflow_scheme')->where(['id' => $scheme_id])->find();
+        /**
+         * @var SchemeInterface $scheme_class
+         */
+        $scheme_class = $scheme['class'];
+        $scheme_class::goback($instance_id);
+    }
+
+    /**
+     * 审批挂起
+     * @param int $instance_id 实例ID
+     */
+    public static function hangup($instance_id)
+    {
+        $data = [
+            'status'    => Instance::STATUS_HANGUP,
+            'is_finish' => 0
+        ];
+        Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
+
+        $scheme_id = Db::table('workflow_instance')->where(['id' => $instance_id])->value('scheme_id');
+        $scheme = Db::table('workflow_scheme')->where(['id' => $scheme_id])->find();
+        /**
+         * @var SchemeInterface $scheme_class
+         */
+        $scheme_class = $scheme['class'];
+        $scheme_class::hangup($instance_id);
+    }
+
+    /**
+     * 审批中断
+     * @param int $instance_id 实例ID
+     */
+    public static function interrupt($instance_id)
+    {
+        $data = [
+            'status'    => Instance::STATUS_INTERRUPT,
+            'is_finish' => 0
+        ];
+        Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
+
+        $scheme_id = Db::table('workflow_instance')->where(['id' => $instance_id])->value('scheme_id');
+        $scheme = Db::table('workflow_scheme')->where(['id' => $scheme_id])->find();
+        /**
+         * @var SchemeInterface $scheme_class
+         */
+        $scheme_class = $scheme['class'];
+        $scheme_class::interrupt($instance_id);
+    }
+
+    /**
+     * 审批取消
+     * @param int $instance_id 实例ID
+     */
+    public static function cancel($instance_id)
+    {
+        $map = [
+            'instance_id' => $instance_id,
+            'action_type' => Operation::ACTION_TYPE_UNEXECUTED
+        ];
+        $data_operation = [
+            'action_id'   => 0,
+            'action_name' => '已取消',
+            'action_type' => Operation::ACTION_TYPE_CANCEL,
+            'action_time' => date('Y-m-d H:i:s')
+        ];
+        Db::table('workflow_operation')->where($map)->update($data_operation);
+
+        $data_instance = [
+            'status'    => Instance::STATUS_CANCEL,
+            'is_finish' => 1
+        ];
+        Db::table('workflow_instance')->where(['id' > $instance_id])->update($data_instance);
+
+        $scheme_id = Db::table('workflow_instance')->where(['id' => $instance_id])->value('scheme_id');
+        $scheme = Db::table('workflow_scheme')->where(['id' => $scheme_id])->find();
+        /**
+         * @var SchemeInterface $scheme_class
+         */
+        $scheme_class = $scheme['class'];
+        $scheme_class::cancel($instance_id);
+    }
+
+    /**
+     * 继续执行方案实例工作流
+     * @param int $instance_id 实例ID
+     */
+    public static function goon($instance_id)
+    {
+        $current_operation = Db::table('workflow_operation')->where(['instance_id' => $instance_id])->order(['create_time' => 'DESC'])->find();
+        if ($current_operation['action_type'] != Operation::ACTION_TYPE_ADOPT) {
+            throw new RuntimeException('goon操作仅允许最后操作节点为通过！');
+        }
+
+        $current_node = Db::table('workflow_node')->where(['id' => $current_operation['node_id']])->find();
+        $scheme = Db::table('workflow_scheme')->where(['id' => $current_node['scheme_id']])->find();
+        $next_nodes = Db::table('workflow_node')->where([['scheme_id', '=', $scheme['id']], ['level', '=', $current_node['level'] + 1]])->select();
+        if (!$next_nodes) {
+            //最后一个节点，则执行方案审批通过操作
+            self::adopt($instance_id);
+        } else {
+            foreach ($next_nodes as $next_node) {
+                /**
+                 * @var NodeInterface $node_class
+                 */
+                $node_class = $next_node['class'];
+                if ($node_class::access($instance_id, 0, $next_node['id'])) {
+                    Operation::create($current_operation['submit_id'], $next_node['id']);
+                }
+            }
+        }
+    }
+
+    /**
+     * 任意追加符合要求的操作
+     * @param int $instance_id 实例ID
+     * @param int $node_id 节点ID
+     * @param int $user_id 指定工作流用户ID，默认不指定
+     * @param bool $notice 是否发送提醒
+     * @return int 返回操作ID
+     */
+    public function append($instance_id, $node_id, $user_id = null, $notice = true)
+    {
+        $current_operation = Db::table('workflow_operation')->where(['instance_id' => $instance_id])->order(['create_time' => 'DESC'])->find();
+        $node = Db::table('workflow_node')->where(['id' => $node_id])->find();
+
+        return Operation::create($current_operation['submit_id'], $node['id'], $user_id, $notice);
+    }
+
+    /**
+     * 再次分配最后执行节点
+     * @param int $instance_id 实例ID
+     * @param bool $original_user 是否分配给原操作者，默认true
+     * @return int 返回操作ID
+     */
+    public static function again($instance_id, $original_user = true)
+    {
+        $last_operation = Db::table('workflow_operation')->where(['instance_id' => $instance_id])->order(['create_time' => 'DESC'])->find();
+
+        if (empty($last_operation['node_id'])) {
+            throw new RuntimeException('尚未给该实例添加执行动作');
+        }
+
+        if ($original_user) {
+            return Operation::create($last_operation['submit_id'], $last_operation['node_id'], $last_operation['user_id']);
+        } else {
+            return Operation::create($last_operation['submit_id'], $last_operation['node_id']);
+        }
+    }
 
     /**
      *  取得实例当前的流程状态
-     * @param int $id 实例ID
+     * @param int $instance_id 实例ID
      * @return array
-     * @todo 待修改
      */
-    public static function getProcess($id)
+    public static function getProcess($instance_id)
     {
-        $instance = Db::name('workflow_instance')->where('id', '=', $id)->find();
-        $last_operation = Db::name('workflow_operation')
-            ->where('instance_id', '=', $instance['id'])
-            ->where('action_type', '<>', Operation::ACTION_TYPE_SUBMIT)
-            ->order('create_time', 'DESC')
+        $instance = Db::table('workflow_instance')->where(['id' => $instance_id])->find();
+        $last_operation = Db::table('workflow_operation')
+            ->where([
+                'instance_id' => $instance['id'],
+                'action_type' => ['<>', Operation::ACTION_TYPE_SUBMIT]
+            ])
+            ->order(['create_time' => 'DESC'])
             ->find();
 
-        $nodes = Db::name('workflow_node')
-            ->where('scheme_id', '=', $instance['scheme_id'])
-            ->order('level', 'ASC')
+        $nodes = Db::table('workflow_node')
+            ->where(['scheme_id' => $instance['scheme_id']])
+            ->order(['level' => 'ASC'])
             ->select();
 
         $processes = [];
@@ -282,81 +479,5 @@ class Instance
         }
 
         return $processes;
-    }
-
-    /**
-     * 绑定外部关联ID
-     * @param int $instance_id 工作流实例ID
-     * @param string $extend_relation 外部关联字段值
-     * @todo 待修改
-     */
-    public static function bindExtendRelation($instance_id, $extend_relation)
-    {
-        Db::name('workflow_instance')->where('id', '=', $instance_id)->update(['extend_relation' => $extend_relation]);
-        Db::name('workflow_contrast')->where('instance_id', '=', $instance_id)->update(['extend_relation' => $extend_relation]);
-    }
-
-    /**
-     * 判断是否有同类型的工作流未完成
-     * @param int $extend_id 外部ID
-     * @param string $scheme_type 方案类型
-     * @return bool
-     */
-    public static function hasNoFinished($extend_id, $scheme_type)
-    {
-        $map = [
-            ['scheme_type', '=', $scheme_type],
-            ['extend_id', '=', $extend_id],
-            ['is_finish', '=', 0]
-        ];
-        $row = Db::name('workflow_instance')->where($map)->find();
-        if ($row) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * 取消实例，并终止所有审批
-     * @param int $instance_id 实例ID
-     */
-    public static function cancel($instance_id)
-    {
-        Db::name('workflow_contrast')->where('instance_id', '=', $instance_id)->update(['is_finish' => 1]);
-
-        $map = [
-            ['instance_id', '=', $instance_id],
-            ['action_type', '=', Operation::ACTION_TYPE_UNEXECUTED]
-        ];
-        $data_operation = [
-            'action_id'   => 0,
-            'action_name' => '已取消',
-            'action_type' => Operation::ACTION_TYPE_CANCEL,
-            'action_time' => date('Y-m-d H:i:s')
-        ];
-        Db::name('workflow_operation')->where($map)->update($data_operation);
-
-        $data_instance = [
-            'status'    => Operation::ACTION_TYPE_CANCEL,
-            'is_finish' => 1
-        ];
-        Db::name('workflow_instance')->where('id', '=', $instance_id)->update($data_instance);
-    }
-
-
-    /**
-     * 再次分配最后执行节点
-     * @param int $instance_id 实例ID
-     * @param bool $org_user 是否分配给原操作者，默认true
-     * @return array [$result, $errmsg]
-     */
-    public static function again($instance_id, $org_user = true)
-    {
-        $scheme_id = Db::name('workflow_instance')->where('id', '=', $instance_id)->value('scheme_id');
-        $scheme = Db::name('workflow_scheme')->where('id', '=', $scheme_id)->find();
-        self::$scheme = new $scheme['class']();
-        $result = self::$scheme->again($instance_id, $org_user);
-        return [$result, self::$scheme->getLastErrMsg()];
     }
 }

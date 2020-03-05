@@ -9,6 +9,8 @@ use fize\workflow\SchemeInterface;
 
 /**
  * 提交
+ *
+ * 单个【实例】可以有多个【提交】
  */
 class Submit
 {

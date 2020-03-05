@@ -55,27 +55,4 @@ interface SchemeInterface
      * @param int $instance_id 实例ID
      */
     public static function cancel($instance_id);
-
-    /**
-     * 继续执行
-     * @param int $instance_id 实例ID
-     */
-    public static function goon($instance_id);
-
-    /**
-     * 任意追加符合要求的操作
-     * @param int $instance_id 实例ID
-     * @param int $node_id 节点ID
-     * @param int $user_id 指定工作流用户ID，默认不指定
-     * @return int 成功返回插入的记录ID
-     */
-    public static function append($instance_id, $node_id, $user_id = null);
-
-    /**
-     * 再次分配最后执行节点
-     * @param int $instance_id 实例ID
-     * @param bool $original_user 是否分配给原操作者，默认true
-     * @return int 成功返回插入的记录ID
-     */
-    public static function again($instance_id, $original_user = true);
 }

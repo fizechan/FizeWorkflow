@@ -3,8 +3,6 @@
 
 namespace fize\workflow;
 
-use fize\workflow\model\Instance;
-
 
 /**
  * 方案
@@ -43,11 +41,8 @@ class Scheme implements SchemeInterface
      */
     public static function adopt($instance_id)
     {
-        $data = [
-            'status'    => Instance::STATUS_ADOPT,
-            'is_finish' => 1
-        ];
-        Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
+        // 内置的审批逻辑不需要做其他逻辑
+        // 外部审批逻辑可以复写该方法实现自身逻辑
     }
 
     /**
@@ -56,11 +51,8 @@ class Scheme implements SchemeInterface
      */
     public static function reject($instance_id)
     {
-        $data = [
-            'status'    => Instance::STATUS_REJECT,
-            'is_finish' => 1
-        ];
-        Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
+        // 内置的审批逻辑不需要做其他逻辑
+        // 外部审批逻辑可以复写该方法实现自身逻辑
     }
 
     /**
@@ -69,44 +61,37 @@ class Scheme implements SchemeInterface
      */
     public static function goback($instance_id)
     {
-        $data = [
-            'status'    => Instance::STATUS_GOBACK,
-            'is_finish' => 0
-        ];
-        Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
+        // 内置的审批逻辑不需要做其他逻辑
+        // 外部审批逻辑可以复写该方法实现自身逻辑
     }
 
+    /**
+     * 审批挂起
+     * @param int $instance_id 实例ID
+     */
     public static function hangup($instance_id)
     {
-        $data = [
-            'status'    => Instance::STATUS_HANGUP,
-            'is_finish' => 0
-        ];
-        Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
+        // 内置的审批逻辑不需要做其他逻辑
+        // 外部审批逻辑可以复写该方法实现自身逻辑
     }
 
+    /**
+     * 审批中断
+     * @param int $instance_id 实例ID
+     */
     public static function interrupt($instance_id)
     {
-        // TODO: Implement interrupt() method.
+        // 内置的审批逻辑不需要做其他逻辑
+        // 外部审批逻辑可以复写该方法实现自身逻辑
     }
 
+    /**
+     * 审批取消
+     * @param int $instance_id 实例ID
+     */
     public static function cancel($instance_id)
     {
-        // TODO: Implement cancel() method.
-    }
-
-    public static function goon($instance_id)
-    {
-        // TODO: Implement goon() method.
-    }
-
-    public static function append($instance_id, $node_id, $user_id = null)
-    {
-        // TODO: Implement append() method.
-    }
-
-    public static function again($instance_id, $original_user = true)
-    {
-        // TODO: Implement again() method.
+        // 内置的审批逻辑不需要做其他逻辑
+        // 外部审批逻辑可以复写该方法实现自身逻辑
     }
 }
