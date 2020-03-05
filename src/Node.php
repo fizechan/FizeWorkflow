@@ -3,7 +3,9 @@
 
 namespace fize\workflow;
 
-
+/**
+ * 内置节点定义
+ */
 class Node implements NodeInterface
 {
     /**

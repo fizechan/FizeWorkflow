@@ -18,7 +18,7 @@ class Node
      */
     public static function current($scheme_id)
     {
-        $rows = Db::name('workflow_node')->where('scheme_id', '=', $scheme_id)->order('level', 'ASC')->select();
+        $rows = Db::table('workflow_node')->where(['scheme_id' => $scheme_id])->order(['level' => 'ASC'])->select();
         if (!$rows) {
             return [];
         }
@@ -36,11 +36,13 @@ class Node
      */
     public static function previous($node_id)
     {
-        $node = Db::name('workflow_node')->where('id', '=', $node_id)->find();
-        $rows = Db::name('workflow_node')
-            ->where('scheme_id', '=', $node['scheme_id'])
-            ->where('level', '<', $node['level'])
-            ->order('level', 'ASC')
+        $node = Db::table('workflow_node')->where(['id' => $node_id])->find();
+        $rows = Db::table('workflow_node')
+            ->where([
+                'scheme_id' => $node['scheme_id'],
+                'level'     => ['<', $node['level']]
+            ])
+            ->order(['level' => 'ASC'])
             ->select();
         return $rows;
     }
@@ -50,9 +52,9 @@ class Node
      * @param int $scheme_id 方案ID
      * @param array $levels_nodes 以层级信息分布的待设置的所有节点
      */
-    public static function build($scheme_id, array $levels_nodes)
+    public static function build($scheme_id, $levels_nodes)
     {
-        Db::name('workflow_node')->where('scheme_id', '=', $scheme_id)->delete();
+        Db::table('workflow_node')->where(['scheme_id' => $scheme_id])->delete();
         $datas = [];
         foreach ($levels_nodes as $index => $nodes) {
             foreach ($nodes as $node) {
@@ -64,19 +66,19 @@ class Node
                 ];
             }
         }
-        Db::name('workflow_node')->insertAll($datas);
+        Db::table('workflow_node')->insertAll($datas);
     }
 
     /**
      * 删除
-     * @param int $id ID
+     * @param int $node_id 节点ID
      */
-    public static function delete($id)
+    public static function delete($node_id)
     {
-        Db::name('workflow_node_action')->where('node_id', '=', $id)->delete();
-        Db::name('workflow_node_role')->where('node_id', '=', $id)->delete();
-        Db::name('workflow_node_user')->where('node_id', '=', $id)->delete();
-        Db::name('workflow_node')->where('id', '=', $id)->delete();
-        Db::name('workflow_operation')->where('node_id', '=', $id)->delete();
+        Db::table('workflow_node_action')->where(['node_id' => $node_id])->delete();
+        Db::table('workflow_node_role')->where(['node_id' => $node_id])->delete();
+        Db::table('workflow_node_user')->where(['node_id' => $node_id])->delete();
+        Db::table('workflow_node')->where(['id' => $node_id])->delete();
+        Db::table('workflow_operation')->where(['node_id' => $node_id])->delete();
     }
 }

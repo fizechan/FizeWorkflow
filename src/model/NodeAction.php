@@ -3,11 +3,11 @@
 
 namespace fize\workflow\model;
 
+use RuntimeException;
 use fize\workflow\Db;
 
 /**
  * 节点操作
- * 节点操作非必要项，可以直接定义在节点前端页面上，然后传值的时候记得带上既可
  */
 class NodeAction
 {
@@ -17,9 +17,9 @@ class NodeAction
      * @param int $node_id 节点ID
      * @return array
      */
-    public static function getList($node_id)
+    public static function getListByNodeId($node_id)
     {
-        $rows = Db::name('workflow_node_action')->where('node_id', '=', $node_id)->order(['id' => 'ASC', 'sort' => 'DESC'])->select();
+        $rows = Db::table('workflow_node_action')->where(['node_id' => $node_id])->order(['id' => 'ASC', 'sort' => 'DESC'])->select();
         if (!$rows) {
             return [];
         }
@@ -36,13 +36,14 @@ class NodeAction
      */
     public static function add($node_id, $action_type, $action_name, $sort = 0)
     {
+        self::checkActionType($action_type);
         $data = [
             'node_id'     => $node_id,
             'action_type' => $action_type,
             'action_name' => $action_name,
             'sort'        => $sort
         ];
-        $id = Db::name('workflow_node_action')->insertGetId($data);
+        $id = Db::table('workflow_node_action')->insertGetId($data);
         return $id;
     }
 
@@ -86,15 +87,17 @@ class NodeAction
     }
 
     /**
-     * 默认初始化
-     * 建立4个默认操作
-     * @param int $node_id 节点ID
+     * 检测操作类型是否合法
+     * @param int $action_type
      */
-    public static function initialize($node_id)
+    protected static function checkActionType($action_type)
     {
-        self::add($node_id, Operation::ACTION_TYPE_ADOPT, '通过');
-        self::add($node_id, Operation::ACTION_TYPE_REJECT, '否决');
-        self::add($node_id, Operation::ACTION_TYPE_GOBACK, '退回');
-        //self::add($node_id, Operation::ACTION_TYPE_HANGUP, '挂起');
+        $allow_action_types = [
+            Operation::ACTION_TYPE_ADOPT, Operation::ACTION_TYPE_REJECT,
+            Operation::ACTION_TYPE_GOBACK, Operation::ACTION_TYPE_HANGUP
+        ];
+        if (in_array($action_type, $allow_action_types)) {
+            throw new RuntimeException("非法的操作类型");
+        }
     }
 }
