@@ -16,7 +16,7 @@ trait Distribute
      * 取出一个适合的用户ID用于任务分发
      * 改写该方法可以任意指定要分配的用户
      * @param int $operation_id 操作ID
-     * @return mixed 有适合的用户ID则返回，没有则返回null
+     * @return int|null 有适合的用户ID则返回，没有则返回null
      */
     protected function getSuitableUserId($operation_id)
     {
@@ -26,9 +26,8 @@ trait Distribute
 SELECT gm_workflow_user.id
 FROM gm_workflow_user
 LEFT JOIN gm_workflow_node_role ON gm_workflow_node_role.role_id = gm_workflow_user.role_id
-LEFT JOIN gm_workflow_node_user ON gm_workflow_node_user.user_id = gm_workflow_user.id
 WHERE
-gm_workflow_node_role.node_id = {$operation['node_id']} OR gm_workflow_node_user.node_id = {$operation['node_id']}
+gm_workflow_node_role.node_id = {$operation['node_id']}
 ORDER BY RAND()
 LIMIT 1
 EOF;

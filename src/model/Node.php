@@ -71,13 +71,13 @@ class Node
 
     /**
      * 删除
+     * @todo 需要添加软删除功能
      * @param int $node_id 节点ID
      */
     public static function delete($node_id)
     {
-        Db::table('workflow_node_action')->where(['node_id' => $node_id])->delete();
+        Db::table('workflow_action')->where(['node_id' => $node_id])->delete();
         Db::table('workflow_node_role')->where(['node_id' => $node_id])->delete();
-        Db::table('workflow_node_user')->where(['node_id' => $node_id])->delete();
         Db::table('workflow_node')->where(['id' => $node_id])->delete();
         Db::table('workflow_operation')->where(['node_id' => $node_id])->delete();
     }

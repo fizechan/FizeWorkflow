@@ -3,6 +3,8 @@
 
 namespace fize\workflow\model;
 
+use RuntimeException;
+use fize\misc\Preg;
 use fize\workflow\Db;
 use fize\workflow\NodeInterface;
 
@@ -91,6 +93,107 @@ class Operation
     }
 
     /**
+     * 分配用户
+     * @param int $operation_id 操作ID
+     * @param int $user_id 指定接收用户ID
+     * @return int 返回用户ID
+     */
+    public function distribute($operation_id, $user_id = null)
+    {
+        $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
+        $node = Db::table('workflow_node')->where(['id' => $operation['node_id']])->find();
+        /**
+         * @var NodeInterface $node_class
+         */
+        $node_class = $node['class'];
+
+        if (is_null($user_id)) {
+            $user_id = $node_class::getSuitableUserId($operation_id);
+            if (!$user_id) {
+                throw new RuntimeException('找不到分配该任务的合适用户！');
+            }
+        }
+        $operation_data = [
+            'user_id'         => $user_id,
+            'distribute_time' => date('Y-m-d H:i:s')
+        ];
+        Db::table('workflow_operation')->where(['id' => $operation_id])->update($operation_data);
+        $node_class::notice($operation_id);
+        return $user_id;
+    }
+
+    /**
+     * 审批通过
+     * @param int $operation_id 操作ID
+     * @param array $fields 提交的表单数据
+     * @param array $node_user_tos 指定要接收的下级节点及用户,如果指定，则马上进行下级任务分发
+     */
+    public function adopt($operation_id, $fields, $node_user_tos = null)
+    {
+        $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
+        if (!in_array((int)$operation['action_type'], [Operation::ACTION_TYPE_UNEXECUTED, Operation::ACTION_TYPE_HANGUP])) {
+            throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
+        }
+        $instance = Db::table('workflow_instance')->where(['id' => $operation['instance_id']])->find();
+        $node = Db::table('workflow_node')->where(['id' => $operation['node_id']])->find();
+        $scheme = Db::table('workflow_scheme')->where(['id' => $instance['scheme_id']])->find();
+
+        Db::startTrans();
+        try {
+            self::saveFields($operation_id, $fields);
+            self::ignoreBefore($operation_id);
+
+            $map = [
+                ['scheme_id', '=', $instance['scheme_id']],
+                ['level', '=', $node['level'] + 1]
+            ];
+            $next_nodes = Db::table('workflow_node')->where($map)->select();
+            if (!$next_nodes) {  //最后一个节点，则执行方案审批通过操作
+                /**
+                 * @var NodeInterface $node_class
+                 */
+                $node_class = $node['class'];
+                if ($node_class::)
+
+
+                if ($this->canNextAdopt($operation_id)) {
+                    $this->adoptScheme = new $scheme['class']();
+                    if (!$this->adoptScheme->adopt($instance['id'])) {
+                        $this->errMsg = $this->adoptScheme->getLastErrMsg();
+                        Db::rollback();
+                        return false;
+                    }
+                    $this->adoptScheme = null;
+                }
+            } else {
+                if ($this->canNextAdopt($operation_id)) {
+                    if ($node_user_tos) {
+                        //直接指定了下级接收者，则马上进行分配
+                        foreach ($node_user_tos as $to_node_id => $to_user_id) {
+                            $this->createUserOperation($instance['id'], $operation['contrast_id'], $to_user_id, $to_node_id);
+                        }
+                    } else {
+                        foreach ($next_nodes as $next_node) {
+                            $this->adoptNextNode = new $next_node['class']();
+                            if ($this->adoptNextNode->access($instance['id'], $operation_id, $next_node['id'])) {
+                                $this->adoptNextNode->createOperation($instance['id'], $operation['contrast_id'], $next_node['id']);
+                            }
+                            $this->adoptNextNode = null;
+                        }
+                    }
+                }
+            }
+            Db::commit();
+            return true;
+        } catch (Exception $e) {
+            ExceptionHandle::report($e);
+            Db::rollback();
+            $this->errMsg = $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
      * 对指定操作ID相关的之前操作节点进行无需操作处理
      * @param int $operation_id 操作ID
      */
@@ -111,16 +214,49 @@ class Operation
         Db::table('workflow_operation')->where($map)->update($data);
     }
 
+    /**
+     * 保存动作
+     * @param int $operation_id 操作记录ID
+     * @param int $action_id 动作ID
+     */
+    protected static function saveAction($operation_id, $action_id)
+    {
+        $data_operation = [
+            'action_id'       => $action_id,
+            'action_time'     => date('Y-m-d H:i:s')
+        ];
+        Db::table('workflow_operation')->where(['id' => $operation_id])->update($data_operation);
+    }
 
     /**
-     * @var Node
+     * 保存数据
+     * @param int $operation_id 操作记录ID
+     * @param array $fields 提交表单数据
      */
-    private static $node;
+    protected static function saveFields($operation_id, $fields)
+    {
+        $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
+        $data_operation_fields = [];
+        foreach ($fields as $n => $v) {
+            $field = Db::table('workflow_node_field')->where(['node_id' => $operation['node_id'], 'name' => $n])->find();
+            if ($field['is_required'] && $v === "") {
+                throw new RuntimeException("字段{$n}必须填写");
+            }
+            if ($field['regex_match']) {
+                if (!Preg::match($field['regex_match'], $v)) {
+                    throw new RuntimeException("字段{$n}不符合规则");
+                }
+            }
 
-    /**
-     * @var Scheme
-     */
-    private static $scheme;
+            $data_operation_fields[] = [
+                'operation_id' => $operation_id,
+                'name'      => $n,
+                'value'     => $v
+            ];
+
+        }
+        Db::table('workflow_operation_field')->insertAll($data_operation_fields);
+    }
 
     /**
      * 取得工作流实例所有直线操作记录组成的JSON字符串
@@ -142,52 +278,6 @@ class Operation
             $operations = [];
         }
         return json_encode($operations);
-    }
-
-    /**
-     * 执行动作
-     * @param int $operation_id 操作记录ID
-     * @param int $action_id 动作ID
-     * @param array $form 提交表单
-     * @param array $extend 重要存储数据
-     */
-    public static function action($operation_id, $action_id, array $form, array $extend = [])
-    {
-        $operation = Db::name('workflow_operation')->where('id', '=', $operation_id)->find();
-
-        $action_name = isset($form['workflow_action_name']) ? $form['workflow_action_name'] : '';
-        $action_type = isset($form['workflow_action_type']) ? $form['workflow_action_type'] : 0;
-        if (isset($form['workflow_action_id']) && empty($action_id)) {
-            $action_id = $form['workflow_action_id'];
-        }
-
-        $action = Db::name('workflow_node_action')->where('id', '=', $action_id)->find();
-        if ($action) {
-            $action_name = empty($action['action_name']) ? $action_name : $action['action_name'];
-            $action_type = empty($action['action_type']) ? $action_type : $action['action_type'];
-        }
-
-        //常用字段使用workflow_前缀来区分
-        $view = isset($form['workflow_view']) ? $form['workflow_view'] : '';
-        $inner_view = isset($form['workflow_inner_view']) ? $form['workflow_inner_view'] : '';
-        $back_node = isset($form['workflow_back_node']) ? $form['workflow_back_node'] : 0;
-        $dispatch_reason = isset($form['workflow_dispatch_reason']) ? $form['workflow_dispatch_reason'] : '';
-
-        $data = [
-            'action_id'       => $action_id,
-            'action_name'     => $action_name,
-            'action_type'     => $action_type,
-            'action_time'     => date('Y-m-d H:i:s'),
-            'view'            => $view,
-            'inner_view'      => $inner_view,
-            'back_node'       => $back_node,
-            'dispatch_reason' => $dispatch_reason,
-            'prev_json'       => self::getPrevJson($operation['instance_id']),
-            'form_json'       => json_encode($form),
-            'extend_json'     => json_encode($extend)
-        ];
-
-        Db::name('workflow_operation')->where('id', '=', $operation_id)->update($data);
     }
 
     /**
@@ -223,7 +313,7 @@ class Operation
      * 为当前所有未执行工作流分配人员
      * @param int $limit 分配数量，为0表示所有
      */
-    public static function distribute($limit = 0)
+    public static function distribute2($limit = 0)
     {
         $offset_operation_id = Cache::has('global_workflow_current_distribute_operation_id') ? Cache::get('global_workflow_current_distribute_operation_id') : 0;
         $sql = <<<EOF
@@ -332,7 +422,7 @@ EOF;
      * @param string $order 排序
      * @return array [$total, $row]
      */
-    public static function getMyPage($offset, $limit, $id, $is_extend_id = false, $where = "", array $params = [], $order = null)
+    public static function getMyPage2($offset, $limit, $id, $is_extend_id = false, $where = "", array $params = [], $order = null)
     {
         if ($is_extend_id) {
             $where_part = "t_operation.user_extend_id = {$id}";
@@ -345,17 +435,6 @@ EOF;
             $where = $where_part;
         }
         return self::getPage($offset, $limit, $where, $params, $order);
-    }
-
-    /**
-     * 根据操作ID获取可使用的动作列表
-     * @param int $operation_id 操作ID
-     * @return array
-     */
-    public static function getNodeActions($operation_id)
-    {
-        $operation = Db::name('workflow_operation')->where('id', '=', $operation_id)->find();
-        return Action::getList($operation['node_id']);
     }
 
     /**

@@ -19,18 +19,26 @@ interface NodeInterface
     public static function access($instance_id, $prev_operation_id, $node_id);
 
     /**
+     * 取出一个适合的用户ID用于任务分发
+     * 改写该方法可以任意指定要分配的用户
+     * @param int $operation_id 操作ID
+     * @return int|null 有适合的用户ID则返回，没有则返回null
+     */
+    public static function getSuitableUserId($operation_id);
+
+    /**
      * 执行通知
      * @param int $operation_id 操作ID
      */
     public static function notice($operation_id);
 
     /**
-     * 分配用户
+     * 用于判断是否可以进行下级[审批通过]任务分发
+     * 通过改写该方法来实现审批通过后是否马上生成下一层级操作
      * @param int $operation_id 操作ID
-     * @param int $user_id 指定接收用户ID
-     * @return bool 操作成功返回true，失败返回false
+     * @return bool
      */
-    public static function distribute($operation_id, $user_id = null);
+    public static function canNextAdopt($operation_id);
 
     /**
      * 通过
