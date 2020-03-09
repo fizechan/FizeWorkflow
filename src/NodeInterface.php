@@ -63,6 +63,7 @@ interface NodeInterface
      * @param array $fields 数据数组
      * @param int $to_node_id 返回到指定节点ID，如果为0，则执行方案的退回操作
      * @param int $to_operation_id 返回到指定操作ID，如果为0，则执行方案的退回操作
+     * @todo 参数$to_node_id考虑移除，添加参数$to_user_id
      */
     public static function goback($operation_id, $fields, $to_node_id = null, $to_operation_id = null);
 
@@ -73,12 +74,4 @@ interface NodeInterface
      * @param array $fields 数据数组
      */
     public static function hangup($operation_id, $fields = null);
-
-    /**
-     * 任务调度
-     * @param int $operation_id 操作ID
-     * @param int $user_id 接收调度的用户ID
-     * @param array $fields 附加数据数组
-     */
-    public static function dispatch($operation_id, $user_id, $fields = null);
 }

@@ -101,8 +101,21 @@ SQL;
      * @param array $fields 数据数组
      * @param int $to_node_id 返回到指定节点ID，如果为0，则执行方案的退回操作
      * @param int $to_operation_id 返回到指定操作ID，如果为0，则执行方案的退回操作
+     * @todo 参数$to_node_id考虑移除，添加参数$to_user_id
      */
     public static function goback($operation_id, $fields, $to_node_id = null, $to_operation_id = null)
+    {
+        // 内置的节点逻辑不需要做其他逻辑
+        // 外部节点逻辑可以复写该方法实现自身逻辑
+    }
+
+    /**
+     * 审核挂起
+     * 挂起方法一般为外部使用，目前就挂起操作而言，没有实际意义，仅产生一条挂起记录
+     * @param int $operation_id 操作ID
+     * @param array $fields 数据数组
+     */
+    public static function hangup($operation_id, $fields = null)
     {
         // 内置的节点逻辑不需要做其他逻辑
         // 外部节点逻辑可以复写该方法实现自身逻辑
