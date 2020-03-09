@@ -68,19 +68,19 @@ class Scheme
      */
     public static function delete($id)
     {
-        $instance = Db::table('workflow_instance')->where('scheme_id', '=', $id)->find();
-        Db::table('workflow_contrast')->where('instance_id', '=', $instance['id'])->delete();
-        Db::table('workflow_instance')->where('id', '=', $instance['id'])->delete();
-        $nodes = Db::table('workflow_node')->where('scheme_id', '=', $id)->select();
+        $instance = Db::table('workflow_instance')->where(['scheme_id' => $id])->find();
+        Db::table('workflow_contrast')->where(['instance_id' => $instance['id']])->delete();
+        Db::table('workflow_instance')->where(['id' => $instance['id']])->delete();
+        $nodes = Db::table('workflow_node')->where(['scheme_id' => $id])->select();
         if ($nodes) {
             foreach ($nodes as $node) {
-                Db::table('workflow_node_action')->where('node_id', '=', $node['id'])->delete();
-                Db::table('workflow_node_role')->where('node_id', '=', $node['id'])->delete();
-                Db::table('workflow_node_user')->where('node_id', '=', $node['id'])->delete();
-                Db::table('workflow_node')->where('id', '=', $node['id'])->delete();
+                Db::table('workflow_node_action')->where(['node_id' => $node['id']])->delete();
+                Db::table('workflow_node_role')->where(['node_id' => $node['id']])->delete();
+                Db::table('workflow_node_user')->where(['node_id' => $node['id']])->delete();
+                Db::table('workflow_node')->where(['id' => $node['id']])->delete();
             }
         }
-        Db::table('workflow_operation')->where('instance_id', '=', $instance['id'])->delete();
-        Db::table('workflow_scheme')->where('id', '=', $id)->delete();
+        Db::table('workflow_operation')->where(['instance_id' => $instance['id']])->delete();
+        Db::table('workflow_scheme')->where(['id' => $id])->delete();
     }
 }
