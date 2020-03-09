@@ -97,9 +97,9 @@ class Operation
      * 分配用户
      * @param int $operation_id 操作ID
      * @param int $user_id 指定接收用户ID
-     * @return int 返回用户ID
+     * @return int|null 返回用户ID,无法分配时返回null
      */
-    public function distribute($operation_id, $user_id = null)
+    public static function distribute($operation_id, $user_id = null)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
         $node = Db::table('workflow_node')->where(['id' => $operation['node_id']])->find();
@@ -111,7 +111,7 @@ class Operation
         if (is_null($user_id)) {
             $user_id = $node_class::getSuitableUserId($operation_id);
             if (!$user_id) {
-                throw new RuntimeException('找不到分配该任务的合适用户！');
+                return null;
             }
         }
         $operation_data = [
@@ -124,13 +124,38 @@ class Operation
     }
 
     /**
+     * 为当前所有未执行工作流分配用户
+     * @param int $limit 分配数量，为0表示所有
+     * @return int 返回分配个数
+     */
+    public static function distributeAll($limit = 0)
+    {
+        $count = 0;
+
+        $no_distribute_operations = Db::table('workflow_operation')
+            ->field(['id'])
+            ->where(['node_id' => ['<>', 0], 'user_id' => null]);
+        if ($limit) {
+            $no_distribute_operations = $no_distribute_operations->limit($limit);
+        }
+        $no_distribute_operations = $no_distribute_operations->select();
+        foreach ($no_distribute_operations as $no_distribute_operation) {
+            if (self::distribute($no_distribute_operation['id'])) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
      * 审批通过
      * @param int $operation_id 操作ID
      * @param array $fields 提交的表单数据
      * @param array $node_user_tos 指定要接收的下级节点及用户,如果指定，则马上进行下级任务分发
      * @todo 参数$node_user_tos考虑移除
      */
-    public function adopt($operation_id, $fields, $node_user_tos = null)
+    public static function adopt($operation_id, $fields, $node_user_tos = null)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
         if (!in_array((int)$operation['action_type'], [Operation::ACTION_TYPE_UNEXECUTED, Operation::ACTION_TYPE_HANGUP])) {
@@ -200,7 +225,7 @@ class Operation
      * @param int $operation_id 操作ID
      * @param array $fields 表单数组
      */
-    public function reject($operation_id, $fields)
+    public static function reject($operation_id, $fields)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
         if (!in_array((int)$operation['action_type'], [Operation::ACTION_TYPE_UNEXECUTED, Operation::ACTION_TYPE_HANGUP])) {
@@ -246,7 +271,7 @@ class Operation
      * @param int $to_operation_id 返回到指定操作ID，如果为0，则执行方案的退回操作
      * @todo 参数$to_node_id考虑移除，添加参数$to_user_id
      */
-    public function goback($operation_id, $fields, $to_node_id = null, $to_operation_id = null)
+    public static function goback($operation_id, $fields, $to_node_id = null, $to_operation_id = null)
     {
         if (is_null($to_node_id) && is_null($to_operation_id)) {
             throw new RuntimeException('节点ID和操作ID必须指定1个！');
@@ -314,7 +339,7 @@ class Operation
      * @param int $operation_id 操作ID
      * @param array $fields 数据数组
      */
-    public function hangup($operation_id, $fields = null)
+    public static function hangup($operation_id, $fields = null)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
         if (!in_array((int)$operation['action_type'], [Operation::ACTION_TYPE_UNEXECUTED])) {
@@ -357,41 +382,54 @@ class Operation
      * @param int $user_id 接收调度的用户ID
      * @param array $fields 附加数据数组
      */
-    public function dispatch($operation_id, $user_id, $fields = null)
+    public static function dispatch($operation_id, $user_id, $fields = null)
     {
-        $operation = Db::name('workflow_operation')->where('id', '=', $operation_id)->find();
-        if (!$operation) {
-            $this->errMsg = '找不到该操作记录！';
-            return false;
-        }
+        $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
         if (!in_array((int)$operation['action_type'], [Operation::ACTION_TYPE_UNEXECUTED, Operation::ACTION_TYPE_HANGUP])) {
-            $this->errMsg = '该操作节点已进行过操作，无法再次执行！';
-            return false;
+            throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
         }
 
         Db::startTrans();
         try {
-            //更新本节点实际操作
-            $operation_data = [
-                'action_id'   => 0,
-                'action_name' => '已调度',
-                'action_type' => Operation::ACTION_TYPE_DISPATCH,
-                'action_time' => date('Y-m-d H:i:s')
-            ];
-            $operation_data = array_merge($operation_data, $form);
-            Db::name('workflow_operation')->where(['id' => $operation_id])->update($operation_data);
+            if ($fields) {
+                self::saveFields($operation_id, $fields);
+            }
 
-            $to_operation_id = $this->createUserOperation($operation['instance_id'], $operation['contrast_id'], $user_id, $operation['node_id']);
-            $this->ignoreBeforeOperation($to_operation_id);
+            self::saveAction($operation_id, 0, Operation::ACTION_TYPE_DISPATCH, '已调度');
+
+            $to_operation_id = self::create($operation['submit_id'], $operation['node_id'], $user_id);
+            self::ignoreBefore($to_operation_id);
 
             Db::commit();
-            return true;
-        } catch (Exception $e) {
-            ExceptionHandle::report($e);
+        } catch (RuntimeException $e) {
             Db::rollback();
-            $this->errMsg = $e->getMessage();
-            return false;
+            throw $e;
         }
+    }
+
+    /**
+     * 统一执行接口
+     * @param int $operation_id 操作ID
+     * @param array $fields 数据表单
+     * @param int $action_id 动作ID
+     * @todo 如何统一传入其他参数
+     */
+    public static function action($operation_id, $fields, $action_id)
+    {
+        $action = Db::table('workflow_action')->where(['id' => $action_id])->find();
+        self::saveAction($operation_id, $action['id'], $action['type'], $action['name']);
+
+        if ($action['type'] == Operation::ACTION_TYPE_ADOPT) {  // 通过
+            self::adopt($operation_id, $fields);
+        } elseif ($action['type'] == Operation::ACTION_TYPE_REJECT) {  // 否决
+            self::reject($operation_id, $fields);
+        } elseif ($action['type'] == Operation::ACTION_TYPE_GOBACK) {  // 退回
+            self::goback($operation_id, $fields);
+        } elseif ($action['type'] == Operation::ACTION_TYPE_HANGUP) {  // 挂起
+            self::hangup($operation_id, $fields);
+        }
+
+        throw new RuntimeException("不支持的操作类型:{$action['type']}");
     }
 
     /**
@@ -419,12 +457,22 @@ class Operation
      * 保存动作
      * @param int $operation_id 操作记录ID
      * @param int $action_id 动作ID
+     * @param int $action_type 动作类型
+     * @param string $action_name 动作描述
      */
-    protected static function saveAction($operation_id, $action_id)
+    protected static function saveAction($operation_id, $action_id, $action_type = null, $action_name = null)
     {
+        if (is_null($action_type)) {
+            $action_type = Db::table('workflow_action')->where(['id' => $action_id])->value('type');
+        }
+        if (is_null($action_name)) {
+            $action_name = Db::table('workflow_action')->where(['id' => $action_id])->value('name');
+        }
         $data_operation = [
-            'action_id'       => $action_id,
-            'action_time'     => date('Y-m-d H:i:s')
+            'action_id'   => $action_id,
+            'action_type' => $action_type,
+            'action_name' => $action_name,
+            'action_time' => date('Y-m-d H:i:s')
         ];
         Db::table('workflow_operation')->where(['id' => $operation_id])->update($data_operation);
     }
@@ -451,8 +499,8 @@ class Operation
 
             $data_operation_fields[] = [
                 'operation_id' => $operation_id,
-                'name'      => $n,
-                'value'     => $v
+                'name'         => $n,
+                'value'        => $v
             ];
 
         }
@@ -460,182 +508,60 @@ class Operation
     }
 
     /**
-     * 取得工作流实例所有直线操作记录组成的JSON字符串
+     * @todo 待验证必要性
+     * 取得工作流实例所有直线操作记录
      * @param int $instance_id 实例ID
-     * @return string
+     * @return array
      */
     public static function getPrevJson($instance_id)
     {
         $map = [
-            ['instance_id', '=', $instance_id],
-            ['action_type', '<>', self::ACTION_TYPE_UNEXECUTED]
+            'instance_id' => ['=', $instance_id],
+            'action_type' => ['<>', self::ACTION_TYPE_UNEXECUTED]
         ];
-        $operations = Db::name('workflow_operation')
+        $operations = Db::table('workflow_operation')
             ->where($map)
-            ->field(['prev_json'], true)
-            ->order('action_time', 'ASC')
+            ->order(['action_time' => 'ASC'])
             ->select();
         if (!$operations) {
             $operations = [];
         }
-        return json_encode($operations);
+        return $operations;
     }
 
     /**
-     * 统一执行接口
-     * @param int $operation_id 操作ID
-     * @param array $form 数据表单
-     * @param int $action_id 动作ID
-     * @param int $action_type 动作类型
-     * @param string $action_name 动作名称
-     * @return array
+     * 列表分页
+     * @param int $page 页码
+     * @param int $size 每页记录数量，默认每页10个
+     * @param mixed $where 条件
+     * @param array|string $order 排序
+     * @return array [记录个数, 总页数、记录数组]
      */
-    public static function execute($operation_id, array $form, $action_id = null, $action_type = null, $action_name = null)
+    public static function getPage($page, $size = 10, $where = null, $order = null)
     {
-        if (!is_null($action_id)) {
-            $form['workflow_action_id'] = $action_id;
-        }
-        if (isset($form['workflow_action_id']) && !empty($form['workflow_action_id'])) {
-            $node_action = Db::name('workflow_node_action')->where('id', '=', $form['workflow_action_id'])->find();
-            $node = Db::name('workflow_node')->where('id', '=', $node_action['node_id'])->find();
-            if (!$node) {
-                return [false, '没有找到该动作记录'];
-            }
-            self::$node = new $node['class']();
-        } else {
-            //使用默认Node类
-            self::$node = new Node();
-        }
-        $result = self::$node->execute($operation_id, $form, $action_id, $action_type, $action_name);
-        return [$result, self::$node->getLastErrMsg()];
-    }
-
-    /**
-     * 为当前所有未执行工作流分配人员
-     * @param int $limit 分配数量，为0表示所有
-     */
-    public static function distribute2($limit = 0)
-    {
-        $offset_operation_id = Cache::has('global_workflow_current_distribute_operation_id') ? Cache::get('global_workflow_current_distribute_operation_id') : 0;
-        $sql = <<<EOF
-SELECT gm_workflow_operation.id, gm_workflow_node.class AS node_class
-FROM gm_workflow_operation
-LEFT JOIN gm_workflow_node ON gm_workflow_node.id = gm_workflow_operation.node_id
-WHERE
-gm_workflow_operation.node_id <> 0 AND gm_workflow_operation.user_id IS NULL
-AND gm_workflow_operation.id > {$offset_operation_id}
-ORDER BY gm_workflow_operation.id ASC
-EOF;
-        if ($limit) {
-            $sql .= " LIMIT {$limit}";
-        }
-
-        $no_distribute_operations = Db::query($sql);
-        if ($no_distribute_operations) {
-            foreach ($no_distribute_operations as $no_distribute_operation) {
-                self::$node = new $no_distribute_operation['node_class']();
-                self::$node->distributeUser($no_distribute_operation['id']);
-                Cache::set('global_workflow_current_distribute_operation_id', $no_distribute_operation['id']);
-            }
-        } else {
-            Cache::set('global_workflow_current_distribute_operation_id', 0);  //复位从头开始轮询
-            Log::write("暂无未执行工作流需要分配", 'workflow');
-        }
-    }
-
-    /**
-     * 用户拉取可操作工作流
-     * @param int $user_id 用户ID
-     * @param array $scheme_ids 指定方案ID
-     * @return array [$bool, $errmsg]
-     */
-    public static function pull($user_id, array $scheme_ids = null)
-    {
-        if ($scheme_ids) {
-            $schemes = Db::name('workflow_scheme')->where('id', 'IN', $scheme_ids)->select();
-        } else {
-            $schemes = Db::name('workflow_scheme')->select();
-        }
-        if (!$schemes) {
-            return [false, '没有可用工作流方案'];
-        }
-        $errmsg = '';
-        foreach ($schemes as $scheme) {
-            self::$scheme = new $scheme['class']();
-            $result = self::$scheme->distribute($user_id, $scheme['id']);
-            if ($result) {
-                return [true, ''];
-            }
-            $errmsg = self::$scheme->getLastErrMsg();
-            self::$scheme = null;
-        }
-        return [false, $errmsg];
-    }
-
-    /**
-     * 取得分页
-     * @param int $offset 偏移量
-     * @param int $limit 每页数量
-     * @param string $where 条件，支持占位符
-     * @param array $params SQL占位参数
-     * @param string $order 排序
-     * @return array [$total, $row]
-     */
-    public static function getPage($offset, $limit, $where = "", array $params = [], $order = null)
-    {
-        $sql = <<<EOF
-SELECT t_operation.*, t_instance.scheme_type AS scheme_type, t_instance.extend_relation AS extend_relation,
-t_instance.name AS instance_name, t_instance.status AS instance_status, t_instance.is_finish AS instance_is_finish,
-t_contrast.form_json,
-t_scheme.name AS scheme_name,
-t_user.name AS user_name
-FROM gm_workflow_operation AS t_operation
-LEFT JOIN gm_workflow_instance AS t_instance ON t_instance.id = t_operation.instance_id
-LEFT JOIN gm_workflow_contrast AS t_contrast ON t_contrast.id = t_operation.contrast_id
-LEFT JOIN gm_workflow_scheme AS t_scheme ON t_scheme.id = t_operation.scheme_id
-LEFT JOIN gm_workflow_user AS t_user ON t_user.id = t_operation.user_id
-EOF;
+        $result = Db::table('workflow_operation')
+            ->alias('t_operation')
+            ->leftJoin(['workflow_scheme', 't_scheme'], 't_scheme.id = t_operation.scheme_id')
+            ->leftJoin(['workflow_instance', 't_instance'], 't_instance.id = t_operation.instance_id')
+            ->leftJoin(['workflow_submit', 't_submit'], 't_submit.id = t_operation.submit_id')
+            ->leftJoin(['workflow_user', 't_user'], 't_user.id = t_operation.user_id')
+            ->field([
+                't_operation.*',
+                'scheme_type' => 't_instance.scheme_type',
+                'instance_name' => 't_instance.name',
+                'instance_status' => 't_instance.status',
+                'instance_is_finish' => 't_instance.is_finish',
+                'scheme_name' => 't_scheme.name',
+                'user_name' => 't_user.name'
+            ]);
         if ($where) {
-            $sql .= " WHERE {$where}";
+            $result = $result->where($where);
         }
         if (!$order) {
-            $order = 't_operation.distribute_time DESC';
+            $order = ['t_operation.distribute_time' => 'DESC'];
         }
-        $sql .= " ORDER BY {$order}";
 
-        $full_sql = substr_replace($sql, " SQL_CALC_FOUND_ROWS ", 6, 0);
-        $full_sql .= " LIMIT {$offset},{$limit}";
-        $row = Db::query($full_sql, $params);
-        $cout_sql = 'SELECT FOUND_ROWS() AS `hr_count`';
-        $crw = Db::query($cout_sql);
-        $total = $crw[0]['hr_count'];
-        return [$total, $row];
-    }
-
-    /**
-     * 获取用户的分页
-     * @param int $offset 偏移量
-     * @param int $limit 每页数量
-     * @param int $id 用户工作流账号ID或者外部ID
-     * @param bool $is_extend_id 账号是否是外部ID
-     * @param string $where 条件，支持占位符
-     * @param array $params SQL占位参数
-     * @param string $order 排序
-     * @return array [$total, $row]
-     */
-    public static function getMyPage2($offset, $limit, $id, $is_extend_id = false, $where = "", array $params = [], $order = null)
-    {
-        if ($is_extend_id) {
-            $where_part = "t_operation.user_extend_id = {$id}";
-        } else {
-            $where_part = "t_operation.user_id = {$id}";
-        }
-        if ($where) {
-            $where = "$where_part AND $where";
-        } else {
-            $where = $where_part;
-        }
-        return self::getPage($offset, $limit, $where, $params, $order);
+        return $result->order($order)->paginate($page, $size);
     }
 
     /**
@@ -651,41 +577,46 @@ EOF;
             $operator .= "=";
         }
 
-        $operation = Db::name('workflow_operation')->where('id', '=', $operation_id)->find();
-        $sql = <<<EOF
-SELECT t_operation.*, t_user.name AS user_name, t_admin.fullname AS user_admin_fullname, t_admin.nickname AS user_admin_nickname
-FROM gm_workflow_operation AS t_operation
-LEFT JOIN gm_workflow_user AS t_user ON t_user.id = t_operation.user_id
-LEFT JOIN gm_admin AS t_admin ON t_admin.id = t_user.extend_id
-WHERE t_operation.instance_id = {$operation['instance_id']} AND t_operation.create_time <= '{$operation['create_time']}' AND t_operation.id {$operator} {$operation['id']}
-ORDER BY t_operation.create_time ASC, t_operation.id ASC
-EOF;
-        $rows = Db::query($sql);
-        if (!$rows) {
-            return [];
-        }
+        $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
+
+        $rows = Db::table('workflow_operation')
+            ->alias('t_operation')
+            ->leftJoin(['workflow_user', 't_user'], 't_user.id = t_operation.user_id')
+            ->field([
+                't_operation.*',
+                'user_name' => 't_user.name'
+            ])
+            ->where([
+                't_operation.instance_id' => $operation['instance_id'],
+                't_operation.create_time' => ['<=', $operation['create_time']],
+                't_operation.id' => [$operator, $operation['id']]
+            ])
+            ->order(['t_operation.create_time' => 'ASC', 't_operation.id' => 'ASC'])
+            ->select();
+
         return $rows;
     }
 
     /**
      * 根据提交ID返回操作记录
-     * @param int $contrast_id 提交ID
+     * @param int $submit_id 提交ID
      * @return array
      */
-    public static function getListByContrastId($contrast_id)
+    public static function getListBySubmitId($submit_id)
     {
-        $sql = <<<EOF
-SELECT t_operation.*, t_user.name AS user_name, t_admin.fullname AS user_admin_fullname, t_admin.nickname AS user_admin_nickname
-FROM gm_workflow_operation AS t_operation
-LEFT JOIN gm_workflow_user AS t_user ON t_user.id = t_operation.user_id
-LEFT JOIN gm_admin AS t_admin ON t_admin.id = t_user.extend_id
-WHERE t_operation.contrast_id = {$contrast_id}
-ORDER BY t_operation.create_time ASC, t_operation.id ASC
-EOF;
-        $rows = Db::query($sql);
-        if (!$rows) {
-            return [];
-        }
+        $rows = Db::table('workflow_operation')
+            ->alias('t_operation')
+            ->leftJoin(['workflow_user', 't_user'], 't_user.id = t_operation.user_id')
+            ->field([
+                't_operation.*',
+                'user_name' => 't_user.name'
+            ])
+            ->where([
+                't_operation.submit_id' => $submit_id,
+            ])
+            ->order(['t_operation.create_time' => 'ASC', 't_operation.id' => 'ASC'])
+            ->select();
+
         return $rows;
     }
 
@@ -696,18 +627,19 @@ EOF;
      */
     public static function getListByInstanceId($instance_id)
     {
-        $sql = <<<EOF
-SELECT t_operation.*, t_user.name AS user_name, t_admin.fullname AS user_admin_fullname, t_admin.nickname AS user_admin_nickname
-FROM gm_workflow_operation AS t_operation
-LEFT JOIN gm_workflow_user AS t_user ON t_user.id = t_operation.user_id
-LEFT JOIN gm_admin AS t_admin ON t_admin.id = t_user.extend_id
-WHERE t_operation.instance_id = {$instance_id}
-ORDER BY t_operation.create_time ASC, t_operation.id ASC
-EOF;
-        $rows = Db::query($sql);
-        if (!$rows) {
-            return [];
-        }
+        $rows = Db::table('workflow_operation')
+            ->alias('t_operation')
+            ->leftJoin(['workflow_user', 't_user'], 't_user.id = t_operation.user_id')
+            ->field([
+                't_operation.*',
+                'user_name' => 't_user.name'
+            ])
+            ->where([
+                't_operation.instance_id' => $instance_id,
+            ])
+            ->order(['t_operation.create_time' => 'ASC', 't_operation.id' => 'ASC'])
+            ->select();
+
         return $rows;
     }
 }

@@ -29,6 +29,7 @@ interface NodeInterface
     /**
      * 执行通知
      * @param int $operation_id 操作ID
+     * @todo 待移除至外部实现
      */
     public static function notice($operation_id);
 
