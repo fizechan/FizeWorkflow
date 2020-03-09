@@ -17,27 +17,23 @@ class Role
      */
     public static function getList()
     {
-        $sql = <<<EOF
-SELECT t_role.*, t_prole.`name` AS pname
-FROM
-gm_workflow_role AS t_role
-LEFT JOIN gm_workflow_role AS t_prole ON t_prole.id = t_role.pid
-EOF;
-        $rows = Db::query($sql);
-        if (!$rows) {
-            return [];
-        }
+        $rows = Db::table('workflow_role')
+            ->alias('t_role')
+            ->leftJoin(['gm_workflow_role', 't_prole'], 't_prole.id = t_role.pid')
+            ->field('t_role.*, t_prole.`name` AS pname')
+            ->select();
+
         return $rows;
     }
 
     /**
      * 取得指定角色
-     * @param $id
+     * @param int $id 角色ID
      * @return array
      */
     public static function getOne($id)
     {
-        $row = Db::name('workflow_role')->where('id', '=', $id)->find();
+        $row = Db::table('workflow_role')->where(['id' => $id])->find();
         return $row;
     }
 
@@ -54,7 +50,7 @@ EOF;
             'name' => $name,
         ];
 
-        $id = Db::name('workflow_role')->insertGetId($data);
+        $id = Db::table('workflow_role')->insertGetId($data);
         return $id;
     }
 
@@ -77,7 +73,7 @@ EOF;
             $data['pid'] = $pid;
         }
 
-        $result = Db::name('workflow_role')->where('id', '=', $id)->update($data);
+        $result = Db::table('workflow_role')->where(['id' => $id])->update($data);
         return $result ? true : false;
     }
 
@@ -88,13 +84,13 @@ EOF;
      */
     public static function delete($id)
     {
-        $child = Db::name('workflow_role')->where('pid', '=', $id)->find();
+        $child = Db::table('workflow_role')->where(['pid' => $id])->find();
         if ($child) {
             //不允许删除带子角色的记录
             return false;
         }
-        Db::name('workflow_role')->where('id', '=', $id)->delete();
-        Db::name('workflow_node_role')->where('role_id', '=', $id)->delete();
+        Db::table('workflow_role')->where(['id' => $id])->delete();
+        Db::table('workflow_node_role')->where(['role_id' => $id])->delete();
         return true;
     }
 }
