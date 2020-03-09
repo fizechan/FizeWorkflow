@@ -7,6 +7,7 @@ use RuntimeException;
 use fize\misc\Preg;
 use fize\workflow\Db;
 use fize\workflow\NodeInterface;
+use fize\workflow\SchemeInterface;
 
 /**
  * 模型：操作记录
@@ -138,51 +139,195 @@ class Operation
         $node = Db::table('workflow_node')->where(['id' => $operation['node_id']])->find();
         $scheme = Db::table('workflow_scheme')->where(['id' => $instance['scheme_id']])->find();
 
+        /**
+         * @var NodeInterface $node_class
+         */
+        $node_class = $node['class'];
+
         Db::startTrans();
         try {
+
+            // 执行节点[审批通过]操作
             self::saveFields($operation_id, $fields);
             self::ignoreBefore($operation_id);
+            $node_class::adopt($operation_id, $fields, $node_user_tos);
 
+            // 执行后续操作
             $map = [
                 ['scheme_id', '=', $instance['scheme_id']],
                 ['level', '=', $node['level'] + 1]
             ];
             $next_nodes = Db::table('workflow_node')->where($map)->select();
             if (!$next_nodes) {  //最后一个节点，则执行方案审批通过操作
-                /**
-                 * @var NodeInterface $node_class
-                 */
-                $node_class = $node['class'];
-                if ($node_class::)
-
-
-                if ($this->canNextAdopt($operation_id)) {
-                    $this->adoptScheme = new $scheme['class']();
-                    if (!$this->adoptScheme->adopt($instance['id'])) {
-                        $this->errMsg = $this->adoptScheme->getLastErrMsg();
-                        Db::rollback();
-                        return false;
-                    }
-                    $this->adoptScheme = null;
+                if ($node_class::canNextAdopt($operation_id)) {
+                    /**
+                     * @var SchemeInterface $scheme_class
+                     */
+                    $scheme_class = $scheme['class'];
+                    $scheme_class::adopt($operation['instance_id']);
                 }
             } else {
-                if ($this->canNextAdopt($operation_id)) {
+                if ($node_class::canNextAdopt($operation_id)) {
                     if ($node_user_tos) {
                         //直接指定了下级接收者，则马上进行分配
                         foreach ($node_user_tos as $to_node_id => $to_user_id) {
-                            $this->createUserOperation($instance['id'], $operation['contrast_id'], $to_user_id, $to_node_id);
+                            self::create($operation['submit_id'], $to_node_id, $to_user_id);
                         }
                     } else {
                         foreach ($next_nodes as $next_node) {
-                            $this->adoptNextNode = new $next_node['class']();
-                            if ($this->adoptNextNode->access($instance['id'], $operation_id, $next_node['id'])) {
-                                $this->adoptNextNode->createOperation($instance['id'], $operation['contrast_id'], $next_node['id']);
+                            /**
+                             * @var NodeInterface $next_node_class
+                             */
+                            $next_node_class = $next_node['class'];
+                            if ($next_node_class::access($operation['instance_id'], $operation['id'], $next_node['id'])) {
+                                self::create($operation['submit_id'], $next_node['id']);
                             }
-                            $this->adoptNextNode = null;
                         }
                     }
                 }
             }
+            Db::commit();
+        } catch (RuntimeException $e) {
+            Db::rollback();
+            throw $e;
+        }
+    }
+
+    /**
+     * 审核否决
+     * 否决后默认是执行了方案否决方法，但是也可以重写该方法来执行特殊事务
+     * @param int $operation_id 操作ID
+     * @param array $fields 表单数组
+     */
+    public function reject($operation_id, array $fields)
+    {
+        $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
+        if (!in_array((int)$operation['action_type'], [Operation::ACTION_TYPE_UNEXECUTED, Operation::ACTION_TYPE_HANGUP])) {
+            throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
+        }
+
+        $instance = Db::table('workflow_instance')->where(['id' => $operation['instance_id']])->find();
+        $node = Db::table('workflow_node')->where(['id' => $operation['node_id']])->find();
+        $scheme = Db::table('workflow_scheme')->where(['id' => $instance['scheme_id']])->find();
+
+        Db::startTrans();
+        try {
+            self::saveFields($operation_id, $fields);
+            self::ignoreBefore($operation_id);
+
+            // 执行节点[审批否决]操作
+            /**
+             * @var NodeInterface $node_class
+             */
+            $node_class = $node['class'];
+            $node_class::reject($operation_id, $fields);
+
+            // 执行方案[审批否决]操作
+            /**
+             * @var SchemeInterface $scheme_class
+             */
+            $scheme_class = $scheme['class'];
+            $scheme_class::reject($operation['instance_id']);
+
+            Db::commit();
+        } catch (RuntimeException $e) {
+            Db::rollback();
+            throw $e;
+        }
+    }
+
+    /**
+     * 审核退回
+     * 一般是退回上一个节点，但是也可以重写该方法来执行特殊事务
+     * @param int $operation_id 操作ID
+     * @param array $form 数据数组
+     * @param int $to_node_id 返回到指定节点ID，如果为0，则执行方案的退回操作
+     * @param int $to_operation_id 返回到指定操作ID，如果为0，则执行方案的退回操作
+     * @return bool 操作成功返回true，失败返回false
+     */
+    public function goback($operation_id, array $form, $to_node_id = null, $to_operation_id = null)
+    {
+        if (is_null($to_node_id) && is_null($to_operation_id)) {
+            $this->errMsg = '节点ID和操作ID必须指定1个！';
+            return false;
+        }
+        if (!is_null($to_node_id) && !is_null($to_operation_id)) {
+            $this->errMsg = '节点ID和操作ID不能同时指定！';
+            return false;
+        }
+
+        $operation = Db::name('workflow_operation')->where('id', '=', $operation_id)->find();
+        if (!$operation) {
+            $this->errMsg = '找不到该操作记录！';
+            return false;
+        }
+        if (!in_array((int)$operation['action_type'], [Operation::ACTION_TYPE_UNEXECUTED, Operation::ACTION_TYPE_HANGUP])) {
+            $this->errMsg = '该操作节点已进行过操作，无法再次执行！';
+            return false;
+        }
+
+        $instance = Db::name('workflow_instance')->where('id', '=', $operation['instance_id'])->find();
+        if (!$instance) {
+            $this->errMsg = '找不到该操作对应工作流实例！';
+            return false;
+        }
+        $scheme = Db::name('workflow_scheme')->where('id', '=', $instance['scheme_id'])->find();
+        if (!$scheme) {
+            $this->errMsg = '找不到该操作对应工作流方案！';
+            return false;
+        }
+
+        Db::startTrans();
+        try {
+            $this->dealAction($operation_id, $form);
+            $this->ignoreBeforeOperation($operation_id);
+
+            if (is_numeric($to_node_id)) {
+                //以节点ID来进行退回操作
+                if ($to_node_id == 0) {
+                    //项目退回
+                    $this->gobackScheme = new $scheme['class']();
+                    if (!$this->gobackScheme->goback($instance['id'])) {
+                        $this->errMsg = $this->gobackScheme->getLastErrMsg();
+                        Db::rollback();
+                        return false;
+                    }
+                    $this->gobackScheme = null;
+                } else {
+                    //退回到指定节点
+
+                    //直接指定为原来的用户
+                    $to_operation = Db::name('workflow_operation')->where('node_id', '=', $to_node_id)->order('action_time', 'DESC')->find();
+                    if (!$to_operation) {
+                        $this->errMsg = '找不到该退回目标操作记录！';
+                        return false;
+                    }
+                    //实时分配
+                    $this->createUserOperation($to_operation['instance_id'], $to_operation['contrast_id'], $to_operation['user_id'], $to_operation['node_id']);
+                }
+            } else {
+                //以操作ID来进行退回操作
+                if ($to_operation_id == 0) {
+                    //项目退回
+                    $this->gobackScheme = new $scheme['class']();
+                    if (!$this->gobackScheme->goback($instance['id'])) {
+                        $this->errMsg = $this->gobackScheme->getLastErrMsg();
+                        Db::rollback();
+                        return false;
+                    }
+                    $this->gobackScheme = null;
+                } else {
+                    //退回到指定操作点
+                    $to_operation = Db::name('workflow_operation')->where([['id', '=', $operation_id], ['instance_id', '=', $operation['instance_id']]])->find();
+                    if (!$to_operation) {
+                        $this->errMsg = '找不到该退回目标操作记录！';
+                        return false;
+                    }
+                    //实时分配
+                    $this->createUserOperation($to_operation['instance_id'], $to_operation['contrast_id'], $to_operation['user_id'], $to_operation['node_id']);
+                }
+            }
+
             Db::commit();
             return true;
         } catch (Exception $e) {

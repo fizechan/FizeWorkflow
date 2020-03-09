@@ -51,6 +51,7 @@ SQL;
     /**
      * 执行通知
      * @param int $operation_id 操作ID
+     * @todo 通知事宜应进行接口优化移至外部实现
      */
     public static function notice($operation_id)
     {
@@ -66,5 +67,44 @@ SQL;
     public static function canNextAdopt($operation_id)
     {
         return true;
+    }
+
+    /**
+     * 审核通过
+     * @param int $operation_id 操作ID
+     * @param array $fields 提交的完整表单
+     * @param array $node_user_tos 指定要接收的下级节点及用户,如果指定，则马上进行下级任务分发
+     * @todo 参数$node_user_tos考虑移除
+     */
+    public static function adopt($operation_id, $fields, $node_user_tos = null)
+    {
+        // 内置的节点逻辑不需要做其他逻辑
+        // 外部节点逻辑可以复写该方法实现自身逻辑
+    }
+
+    /**
+     * 审核否决
+     * 否决后默认是执行了方案否决方法，但是也可以重写该方法来执行特殊事务
+     * @param int $operation_id 操作ID
+     * @param array $fields 表单数组
+     */
+    public static function reject($operation_id, $fields)
+    {
+        // 内置的节点逻辑不需要做其他逻辑
+        // 外部节点逻辑可以复写该方法实现自身逻辑
+    }
+
+    /**
+     * 审核退回
+     * 一般是退回上一个节点，但是也可以重写该方法来执行特殊事务
+     * @param int $operation_id 操作ID
+     * @param array $fields 数据数组
+     * @param int $to_node_id 返回到指定节点ID，如果为0，则执行方案的退回操作
+     * @param int $to_operation_id 返回到指定操作ID，如果为0，则执行方案的退回操作
+     */
+    public static function goback($operation_id, $fields, $to_node_id = null, $to_operation_id = null)
+    {
+        // 内置的节点逻辑不需要做其他逻辑
+        // 外部节点逻辑可以复写该方法实现自身逻辑
     }
 }
