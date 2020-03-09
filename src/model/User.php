@@ -20,74 +20,57 @@ class User
      */
     public static function getList($pid = null, $role_id = null, $kwd = null)
     {
-        $sql = <<<EOF
-SELECT t_user.*, t_role.name AS role_name, t_puser.name AS pname
-FROM
-gm_workflow_user AS t_user
-LEFT JOIN gm_workflow_role AS t_role ON t_role.id = t_user.role_id
-LEFT JOIN gm_workflow_user AS t_puser ON t_puser.id = t_user.pid
-WHERE t_user.id <> 0
-EOF;
-        $params = [];
-        if (!is_null($pid)) {
-            $params[] = $pid;
-            $sql .= " AND t_user.pid = ?";
+        $map = [];
+        if ($pid) {
+            $map['t_user.pid'] = $pid;
         }
-        if (!is_null($role_id)) {
-            $params[] = $role_id;
-            $sql .= " AND t_user.role_id = ?";
+        if ($role_id) {
+            $map['t_user.role_id'] = $role_id;
         }
-        if (!is_null($kwd)) {
-            $params[] = "%{$kwd}%";
-            $sql .= " AND t_user.name LIKE ?";
+        if ($kwd) {
+            $map['t_user.name'] = ['LIKE', "%{$kwd}%"];
         }
-        $rows = Db::query($sql, $params);
-        if (!$rows) {
-            return [];
-        }
+
+        $rows = Db::table('workflow_user')
+            ->alias('t_user')
+            ->leftJoin(['workflow_role', 't_role'], 't_role.id = t_user.role_id')
+            ->leftJoin(['workflow_user', 't_puser'], 't_puser.id = t_user.pid')
+            ->field('t_user.*, t_role.name AS role_name, t_puser.name AS pname')
+            ->select();
+
         return $rows;
     }
 
     /**
      * 取得用户分页
      * @param int $page 指定页码
-     * @param int $limit 每页数量
+     * @param int $size 每页数量
      * @param int $pid 指定父用户ID
      * @param int $role_id 指定角色ID
      * @param string $kwd 搜索关键字
      * @return array [$total, $row]
      */
-    public static function getPage($page, $limit = 10, $pid = null, $role_id = null, $kwd = null)
+    public static function getPage($page, $size = 10, $pid = null, $role_id = null, $kwd = null)
     {
-        $sql = <<<EOF
-SELECT t_user.*, t_role.name AS role_name, t_puser.name AS pname
-FROM
-gm_workflow_user AS t_user
-LEFT JOIN gm_workflow_role AS t_role ON t_role.id = t_user.role_id
-LEFT JOIN gm_workflow_user AS t_puser ON t_puser.id = t_user.pid
-WHERE t_user.id <> 0
-EOF;
-        $params = [];
-        if (!is_null($pid)) {
-            $params[] = $pid;
-            $sql .= " AND t_user.pid = ?";
+        $map = [];
+        if ($pid) {
+            $map['t_user.pid'] = $pid;
         }
-        if (!is_null($role_id)) {
-            $params[] = $role_id;
-            $sql .= " AND t_user.role_id = ?";
+        if ($role_id) {
+            $map['t_user.role_id'] = $role_id;
         }
-        if (!is_null($kwd)) {
-            $params[] = "%{$kwd}%";
-            $sql .= " AND t_user.name LIKE ?";
+        if ($kwd) {
+            $map['t_user.name'] = ['LIKE', "%{$kwd}%"];
         }
-        $full_sql = substr_replace($sql, " SQL_CALC_FOUND_ROWS ", 6, 0);
-        $offset = ($page - 1) * $limit;
-        $full_sql .= " LIMIT {$offset},{$limit}";
-        $row = Db::query($full_sql, $params);
-        $cout_sql = 'SELECT FOUND_ROWS() AS `hr_count`';
-        $crw = Db::query($cout_sql);
-        $total = $crw[0]['hr_count'];
-        return [$total, $row];
+
+        $result = Db::table('workflow_user')
+            ->alias('t_user')
+            ->leftJoin(['workflow_role', 't_role'], 't_role.id = t_user.role_id')
+            ->leftJoin(['workflow_user', 't_puser'], 't_puser.id = t_user.pid')
+            ->field('t_user.*, t_role.name AS role_name, t_puser.name AS pname')
+            ->paginate($page, $size);
+
+        return $result;
     }
 
     /**
@@ -97,8 +80,8 @@ EOF;
      */
     public static function getProleUsers($role_id)
     {
-        $role = Db::name('workflow_role')->where('id', '=', $role_id)->find();
-        $users = Db::name('workflow_user')->where('role_id', '=', $role['pid'])->select();
+        $role = Db::table('workflow_role')->where(['id' => $role_id])->find();
+        $users = Db::table('workflow_user')->where(['role_id' => $role['pid']])->select();
         if (!$users) {
             return [];
         }
@@ -128,7 +111,7 @@ EOF;
             'extend_id'    => $extend_id,
             'extend_quota' => $extend_quota
         ];
-        $id = Db::name('workflow_user')->insertGetId($data);
+        $id = Db::table('workflow_user')->insertGetId($data);
         return $id;
     }
 
@@ -171,7 +154,7 @@ EOF;
             $data['extend_quota'] = $extend_quota;
         }
 
-        $result = Db::name('workflow_user')->where('id', '=', $id)->update($data);
+        $result = Db::table('workflow_user')->where(['id' => $id])->update($data);
         return $result ? true : false;
     }
 
@@ -182,12 +165,12 @@ EOF;
      */
     public static function delete($id)
     {
-        $child = Db::name('workflow_user')->where('pid', '=', $id)->find();
+        $child = Db::table('workflow_user')->where(['pid' => $id])->find();
         if ($child) {
             //不允许删除带子用户的记录
             return false;
         }
-        $result = Db::name('workflow_user')->where('id', '=', $id)->delete();
+        $result = Db::table('workflow_user')->where(['id' => $id])->delete();
         return $result ? true : false;
     }
 }
