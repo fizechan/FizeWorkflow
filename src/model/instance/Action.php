@@ -5,6 +5,7 @@ namespace fize\workflow\model\instance;
 
 use RuntimeException;
 use fize\misc\Preg;
+use fize\workflow\Action as Common;
 use fize\workflow\Db;
 use fize\workflow\NodeInterface;
 use fize\workflow\SchemeInterface;
@@ -12,52 +13,8 @@ use fize\workflow\SchemeInterface;
 /**
  * 模型：操作记录
  */
-class Operation
+class Action extends Common
 {
-    /**
-     * 操作：未操作
-     */
-    const ACTION_TYPE_UNEXECUTED = 0;
-
-    /**
-     * 操作：通过
-     */
-    const ACTION_TYPE_ADOPT = 1;
-
-    /**
-     * 操作：否决
-     */
-    const ACTION_TYPE_REJECT = 2;
-
-    /**
-     * 操作：退回
-     */
-    const ACTION_TYPE_GOBACK = 3;
-
-    /**
-     * 操作：挂起
-     */
-    const ACTION_TYPE_HANGUP = 4;
-
-    /**
-     * 操作：无需操作
-     */
-    const ACTION_TYPE_DISUSE = 5;
-
-    /**
-     * 操作：调度
-     */
-    const ACTION_TYPE_DISPATCH = 6;
-
-    /**
-     * 操作：提交
-     */
-    const ACTION_TYPE_SUBMIT = 7;
-
-    /**
-     * 操作：取消
-     */
-    const ACTION_TYPE_CANCEL = 8;
 
     /**
      * 创建操作
@@ -158,7 +115,7 @@ class Operation
     public static function adopt($operation_id, $fields, $node_user_tos = null)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
-        if (!in_array((int)$operation['action_type'], [Operation::ACTION_TYPE_UNEXECUTED, Operation::ACTION_TYPE_HANGUP])) {
+        if (!in_array((int)$operation['action_type'], [Action::TYPE_UNEXECUTED, Action::TYPE_HANGUP])) {
             throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
         }
         $instance = Db::table('workflow_instance')->where(['id' => $operation['instance_id']])->find();
@@ -228,7 +185,7 @@ class Operation
     public static function reject($operation_id, $fields)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
-        if (!in_array((int)$operation['action_type'], [Operation::ACTION_TYPE_UNEXECUTED, Operation::ACTION_TYPE_HANGUP])) {
+        if (!in_array((int)$operation['action_type'], [Action::TYPE_UNEXECUTED, Action::TYPE_HANGUP])) {
             throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
         }
 
@@ -281,7 +238,7 @@ class Operation
         }
 
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
-        if (!in_array((int)$operation['action_type'], [Operation::ACTION_TYPE_UNEXECUTED, Operation::ACTION_TYPE_HANGUP])) {
+        if (!in_array((int)$operation['action_type'], [Action::TYPE_UNEXECUTED, Action::TYPE_HANGUP])) {
             throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
         }
 
@@ -342,7 +299,7 @@ class Operation
     public static function hangup($operation_id, $fields = null)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
-        if (!in_array((int)$operation['action_type'], [Operation::ACTION_TYPE_UNEXECUTED])) {
+        if (!in_array((int)$operation['action_type'], [Action::TYPE_UNEXECUTED])) {
             throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
         }
 
@@ -385,7 +342,7 @@ class Operation
     public static function dispatch($operation_id, $user_id, $fields = null)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
-        if (!in_array((int)$operation['action_type'], [Operation::ACTION_TYPE_UNEXECUTED, Operation::ACTION_TYPE_HANGUP])) {
+        if (!in_array((int)$operation['action_type'], [Action::TYPE_UNEXECUTED, Action::TYPE_HANGUP])) {
             throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
         }
 
@@ -395,7 +352,7 @@ class Operation
                 self::saveFields($operation_id, $fields);
             }
 
-            self::saveAction($operation_id, 0, Operation::ACTION_TYPE_DISPATCH, '已调度');
+            self::saveAction($operation_id, 0, Action::TYPE_DISPATCH, '已调度');
 
             $to_operation_id = self::create($operation['submit_id'], $operation['node_id'], $user_id);
             self::ignoreBefore($to_operation_id);
@@ -419,13 +376,13 @@ class Operation
         $action = Db::table('workflow_action')->where(['id' => $action_id])->find();
         self::saveAction($operation_id, $action['id'], $action['type'], $action['name']);
 
-        if ($action['type'] == Operation::ACTION_TYPE_ADOPT) {  // 通过
+        if ($action['type'] == Action::TYPE_ADOPT) {  // 通过
             self::adopt($operation_id, $fields);
-        } elseif ($action['type'] == Operation::ACTION_TYPE_REJECT) {  // 否决
+        } elseif ($action['type'] == Action::TYPE_REJECT) {  // 否决
             self::reject($operation_id, $fields);
-        } elseif ($action['type'] == Operation::ACTION_TYPE_GOBACK) {  // 退回
+        } elseif ($action['type'] == Action::TYPE_GOBACK) {  // 退回
             self::goback($operation_id, $fields);
-        } elseif ($action['type'] == Operation::ACTION_TYPE_HANGUP) {  // 挂起
+        } elseif ($action['type'] == Action::TYPE_HANGUP) {  // 挂起
             self::hangup($operation_id, $fields);
         }
 
@@ -442,12 +399,12 @@ class Operation
         $map = [
             'instance_id' => ['=', $operation['instance_id']],
             'create_time' => ['<', $operation['create_time']],
-            'action_type' => ['=', Operation::ACTION_TYPE_UNEXECUTED]
+            'action_type' => ['=', Action::TYPE_UNEXECUTED]
         ];
         $data = [
             'action_id'   => 0,
             'action_name' => '无需操作',
-            'action_type' => Operation::ACTION_TYPE_DISUSE,
+            'action_type' => Action::TYPE_DISUSE,
             'action_time' => date('Y-m-d H:i:s')
         ];
         Db::table('workflow_operation')->where($map)->update($data);
@@ -508,16 +465,16 @@ class Operation
     }
 
     /**
-     * @todo 待验证必要性
-     * 取得工作流实例所有直线操作记录
      * @param int $instance_id 实例ID
      * @return array
+     * @todo 待验证必要性
+     * 取得工作流实例所有直线操作记录
      */
     public static function getPrevJson($instance_id)
     {
         $map = [
             'instance_id' => ['=', $instance_id],
-            'action_type' => ['<>', self::ACTION_TYPE_UNEXECUTED]
+            'action_type' => ['<>', Action::TYPE_UNEXECUTED]
         ];
         $operations = Db::table('workflow_operation')
             ->where($map)
@@ -547,12 +504,12 @@ class Operation
             ->leftJoin(['workflow_user', 't_user'], 't_user.id = t_operation.user_id')
             ->field([
                 't_operation.*',
-                'scheme_type' => 't_instance.scheme_type',
-                'instance_name' => 't_instance.name',
-                'instance_status' => 't_instance.status',
+                'scheme_type'        => 't_instance.scheme_type',
+                'instance_name'      => 't_instance.name',
+                'instance_status'    => 't_instance.status',
                 'instance_is_finish' => 't_instance.is_finish',
-                'scheme_name' => 't_scheme.name',
-                'user_name' => 't_user.name'
+                'scheme_name'        => 't_scheme.name',
+                'user_name'          => 't_user.name'
             ]);
         if ($where) {
             $result = $result->where($where);
@@ -589,7 +546,7 @@ class Operation
             ->where([
                 't_operation.instance_id' => $operation['instance_id'],
                 't_operation.create_time' => ['<=', $operation['create_time']],
-                't_operation.id' => [$operator, $operation['id']]
+                't_operation.id'          => [$operator, $operation['id']]
             ])
             ->order(['t_operation.create_time' => 'ASC', 't_operation.id' => 'ASC'])
             ->select();

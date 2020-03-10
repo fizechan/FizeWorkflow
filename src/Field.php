@@ -10,61 +10,6 @@ class Field
 {
 
     /**
-     * @var string 显示名
-     */
-    public $title = null;
-
-    /**
-     * @var string 字段名
-     */
-    public $name = null;
-
-    /**
-     * @var string 类型
-     */
-    public $type = null;
-
-    /**
-     * @var int 是否必填
-     */
-    public $isRequired = 1;
-
-    /**
-     * @var string 匹配正则表达式
-     */
-    public $regexMatch = null;
-
-    /**
-     * @var string 预加载字符串
-     */
-    public $preload = null;
-
-    /**
-     * @var string 默认值
-     */
-    public $value = null;
-
-    /**
-     * @var string 描述提示
-     */
-    public $hint = null;
-
-    /**
-     * @var array 其他属性
-     */
-    public $attrs = null;
-
-    /**
-     * @var array 扩展信息
-     */
-    public $extend = null;
-
-    /**
-     * @var int 排序，值小靠前
-     */
-    public $sort = 0;
-
-    /**
      * 全部可用字段类型
      * @return string[]
      */

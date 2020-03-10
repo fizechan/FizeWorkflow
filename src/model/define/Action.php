@@ -4,12 +4,13 @@
 namespace fize\workflow\model\define;
 
 use RuntimeException;
+use fize\workflow\Action as Common;
 use fize\workflow\Db;
 
 /**
  * 动作
  */
-class Action
+class Action extends Common
 {
 
     /**
@@ -95,8 +96,7 @@ class Action
     protected static function checkActionType($action_type)
     {
         $allow_action_types = [
-            Operation::ACTION_TYPE_ADOPT, Operation::ACTION_TYPE_REJECT,
-            Operation::ACTION_TYPE_GOBACK, Operation::ACTION_TYPE_HANGUP
+            Action::TYPE_ADOPT, Action::TYPE_REJECT, Action::TYPE_GOBACK, Action::TYPE_HANGUP
         ];
         if (in_array($action_type, $allow_action_types)) {
             throw new RuntimeException("非法的操作类型");
