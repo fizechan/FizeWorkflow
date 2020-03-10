@@ -1,7 +1,7 @@
 <?php
 
 
-namespace fize\workflow\model;
+namespace fize\workflow\model\define;
 
 use fize\workflow\Db;
 

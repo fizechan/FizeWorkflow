@@ -1,6 +1,6 @@
 <?php
 
-namespace fize\workflow\model;
+namespace fize\workflow\model\instance;
 
 use RuntimeException;
 use fize\misc\Preg;

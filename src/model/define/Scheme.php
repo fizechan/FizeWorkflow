@@ -1,7 +1,7 @@
 <?php
 
 
-namespace fize\workflow\model;
+namespace fize\workflow\model\define;
 
 use fize\crypt\Json;
 use fize\workflow\Db;
@@ -54,11 +54,57 @@ class Scheme
 
     /**
      * 一键复制
-     * @param $scheme_id
+     * @param int $scheme_id 方案ID
+     * @return int 新的方案ID
      */
     public static function copy($scheme_id)
     {
+        $scheme = Db::table('workflow_scheme')->where(['id' => $scheme_id])->find();
 
+        $data_scheme = $scheme;
+        unset($data_scheme['id']);
+        $new_scheme_id = Db::table('workflow_scheme')->insertGetId($data_scheme);
+
+        $scheme_fields = Db::table('workflow_scheme_field')->where(['scheme_id' => $scheme_id])->select();
+        $data_scheme_fields = [];
+        foreach ($scheme_fields as $scheme_field) {
+            unset($scheme_field['id']);
+            $scheme_field['scheme_id'] = $new_scheme_id;
+            $scheme_fields['create_time'] = date('Y-m-d H:i:s');
+            $data_scheme_fields[] = $scheme_field;
+        }
+        Db::table('workflow_scheme_field')->insertAll($data_scheme_fields);
+
+        $nodes = Db::table('workflow_node')->where(['scheme_id' => $scheme_id])->select();
+
+        $map_node = [];
+        foreach ($nodes as $node) {
+            $data_node = $node;
+            unset($data_node['id']);
+            $data_node['scheme_id'] = $new_scheme_id;
+            $new_node_id = Db::table('workflow_node')->insertGetId($data_node);
+
+            $map_node[(string)$new_node_id] = $node['id'];
+
+            $actions = Db::table('workflow_node_action')->where(['node_id' => $node['id']])->select();
+            $data_actions = [];
+            foreach ($actions as $action) {
+                $data_action = $action;
+                unset($data_action['id']);
+                $data_action['node_id'] = $new_node_id;
+                $data_action['create_time'] = date('Y-m-d H:i:s');
+                $data_actions[] = $data_action;
+            }
+            Db::table('workflow_node_action')->insertAll($data_scheme_fields);
+
+            $node_fields = Db::table('workflow_node_field')->where(['node_id' => $node['id']])->select();
+            $node_roles = Db::table('workflow_node_field')->where(['node_id' => $node['id']])->select();
+            $node_tos = Db::table('workflow_node_field')->where(['node_id' => $node['id']])->select();
+        }
+
+
+
+        //更新tos
     }
 
     /**
