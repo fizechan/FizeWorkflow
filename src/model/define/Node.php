@@ -13,12 +13,12 @@ class Node
 
     /**
      * 方案当前的所有节点
-     * @param int $scheme_id 方案ID
+     * @param int $def_scheme_id 方案ID
      * @return array 返回所有节点，以层级信息分布
      */
-    public static function current($scheme_id)
+    public static function current($def_scheme_id)
     {
-        $rows = Db::table('workflow_node')->where(['scheme_id' => $scheme_id])->order(['level' => 'ASC'])->select();
+        $rows = Db::table('workflow_def_node')->where(['def_scheme_id' => $def_scheme_id])->order(['level' => 'ASC'])->select();
         if (!$rows) {
             return [];
         }
@@ -80,5 +80,10 @@ class Node
         Db::table('workflow_node_role')->where(['node_id' => $node_id])->delete();
         Db::table('workflow_node')->where(['id' => $node_id])->delete();
         Db::table('workflow_operation')->where(['node_id' => $node_id])->delete();
+    }
+
+    public static function setTos()
+    {
+
     }
 }

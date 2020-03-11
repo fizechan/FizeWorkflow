@@ -12,7 +12,7 @@ class Workflow
      */
     protected static $config;
 
-    public function __construct(array $config)
+    public function __construct($config)
     {
         $db_type = $config['db']['type'];
         $db_config = $config['db']['config'];
