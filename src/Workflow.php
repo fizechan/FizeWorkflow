@@ -3,7 +3,11 @@
 
 namespace fize\workflow;
 
-
+/**
+ * 工作流
+ *
+ * 通过该静态类统一对外提供接口
+ */
 class Workflow
 {
 

@@ -1,7 +1,7 @@
 <?php
 
 
-namespace fize\workflow\model\instance;
+namespace fize\workflow\model;
 
 use fize\crypt\Json;
 use fize\workflow\Db;

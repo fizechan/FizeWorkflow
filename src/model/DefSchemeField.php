@@ -1,7 +1,7 @@
 <?php
 
 
-namespace fize\workflow\model\define;
+namespace fize\workflow\model;
 
 use RuntimeException;
 use fize\crypt\Json;

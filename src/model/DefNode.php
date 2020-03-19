@@ -1,7 +1,7 @@
 <?php
 
 
-namespace fize\workflow\model\define;
+namespace fize\workflow\model;
 
 use fize\workflow\Db;
 
@@ -71,8 +71,8 @@ class DefNode
 
     /**
      * 删除
-     * @todo 需要添加软删除功能
      * @param int $node_id 节点ID
+     * @todo 需要添加软删除功能
      */
     public static function delete($node_id)
     {
