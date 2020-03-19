@@ -8,7 +8,7 @@ use fize\workflow\Db;
 /**
  * 节点
  */
-class Node
+class DefNode
 {
 
     /**

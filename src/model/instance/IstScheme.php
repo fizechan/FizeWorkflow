@@ -13,7 +13,7 @@ use fize\workflow\NodeInterface;
  *
  * 【实例】是【方案】的实例化表现
  */
-class Scheme
+class IstScheme
 {
     /**
      * 状态：执行中
@@ -70,7 +70,7 @@ class Scheme
             $data_instance = [
                 'scheme_id' => $scheme_id,
                 'name'      => $name,
-                'status'    => Scheme::STATUS_EXECUTING,
+                'status'    => IstScheme::STATUS_EXECUTING,
                 'is_finish' => 0
             ];
             $instance_id = Db::table('workflow_instance')->insertGetId($data_instance);
@@ -115,7 +115,7 @@ class Scheme
             'distribute_time' => date('Y-m-d H:i:s'),
             'action_id'       => 0,
             'action_name'     => "第{$submit_times}次提交",
-            'action_type'     => Action::ACTION_TYPE_SUBMIT,
+            'action_type'     => IstAction::ACTION_TYPE_SUBMIT,
             'action_time'     => date('Y-m-d H:i:s')
         ];
         Db::table('workflow_operation')->insert($data_operation);
@@ -150,7 +150,7 @@ class Scheme
              */
             $node = $lv1node['class'];
             if ($node::access($instance_id, 0, $lv1node['id'])) {
-                Action::create($submit_id, $lv1node['id']);
+                IstAction::create($submit_id, $lv1node['id']);
             }
         }
     }
@@ -167,12 +167,12 @@ class Scheme
             //忽略之前所有未操作
             $map = [
                 ['instance_id', '=', $instance_id],
-                ['action_type', '=', Action::ACTION_TYPE_UNEXECUTED]
+                ['action_type', '=', IstAction::ACTION_TYPE_UNEXECUTED]
             ];
             $data = [
                 'action_id'   => 0,
                 'action_name' => '无需操作',
-                'action_type' => Action::ACTION_TYPE_DISUSE,
+                'action_type' => IstAction::ACTION_TYPE_DISUSE,
                 'action_time' => date('Y-m-d H:i:s')
             ];
             Db::table('workflow_operation')->where($map)->update($data);
@@ -189,7 +189,7 @@ class Scheme
             Db::table('workflow_submit')->where($map)->update(['is_finish' => 1]);
 
             $data_instance = [
-                'status'      => Scheme::STATUS_EXECUTING,
+                'status'      => IstScheme::STATUS_EXECUTING,
                 'is_finish'   => 0,
                 'update_time' => date('Y-m-d H:i:s')
             ];
@@ -209,7 +209,7 @@ class Scheme
                  */
                 $node = $lv1node['class'];
                 if ($node::access($instance_id, 0, $lv1node['id'])) {
-                    Action::create($submit_id, $lv1node['id']);
+                    IstAction::create($submit_id, $lv1node['id']);
                 }
             }
         } catch (RuntimeException $e) {
@@ -225,7 +225,7 @@ class Scheme
     public static function adopt($instance_id)
     {
         $data_instance = [
-            'status'    => Scheme::STATUS_ADOPT,
+            'status'    => IstScheme::STATUS_ADOPT,
             'is_finish' => 1
         ];
         Db::table('workflow_instance')->where(['id' => $instance_id])->update($data_instance);
@@ -246,7 +246,7 @@ class Scheme
     public static function reject($instance_id)
     {
         $data = [
-            'status'    => Scheme::STATUS_REJECT,
+            'status'    => IstScheme::STATUS_REJECT,
             'is_finish' => 1
         ];
         Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
@@ -267,7 +267,7 @@ class Scheme
     public static function goback($instance_id)
     {
         $data = [
-            'status'    => Scheme::STATUS_GOBACK,
+            'status'    => IstScheme::STATUS_GOBACK,
             'is_finish' => 0
         ];
         Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
@@ -288,7 +288,7 @@ class Scheme
     public static function hangup($instance_id)
     {
         $data = [
-            'status'    => Scheme::STATUS_HANGUP,
+            'status'    => IstScheme::STATUS_HANGUP,
             'is_finish' => 0
         ];
         Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
@@ -309,7 +309,7 @@ class Scheme
     public static function interrupt($instance_id)
     {
         $data = [
-            'status'    => Scheme::STATUS_INTERRUPT,
+            'status'    => IstScheme::STATUS_INTERRUPT,
             'is_finish' => 0
         ];
         Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
@@ -331,18 +331,18 @@ class Scheme
     {
         $map = [
             'instance_id' => $instance_id,
-            'action_type' => Action::ACTION_TYPE_UNEXECUTED
+            'action_type' => IstAction::ACTION_TYPE_UNEXECUTED
         ];
         $data_operation = [
             'action_id'   => 0,
             'action_name' => '已取消',
-            'action_type' => Action::ACTION_TYPE_CANCEL,
+            'action_type' => IstAction::ACTION_TYPE_CANCEL,
             'action_time' => date('Y-m-d H:i:s')
         ];
         Db::table('workflow_operation')->where($map)->update($data_operation);
 
         $data_instance = [
-            'status'    => Scheme::STATUS_CANCEL,
+            'status'    => IstScheme::STATUS_CANCEL,
             'is_finish' => 1
         ];
         Db::table('workflow_instance')->where(['id' > $instance_id])->update($data_instance);
@@ -363,7 +363,7 @@ class Scheme
     public static function goon($instance_id)
     {
         $current_operation = Db::table('workflow_operation')->where(['instance_id' => $instance_id])->order(['create_time' => 'DESC'])->find();
-        if ($current_operation['action_type'] != Action::ACTION_TYPE_ADOPT) {
+        if ($current_operation['action_type'] != IstAction::ACTION_TYPE_ADOPT) {
             throw new RuntimeException('goon操作仅允许最后操作节点为通过！');
         }
 
@@ -380,7 +380,7 @@ class Scheme
                  */
                 $node_class = $next_node['class'];
                 if ($node_class::access($instance_id, 0, $next_node['id'])) {
-                    Action::create($current_operation['submit_id'], $next_node['id']);
+                    IstAction::create($current_operation['submit_id'], $next_node['id']);
                 }
             }
         }
@@ -399,7 +399,7 @@ class Scheme
         $current_operation = Db::table('workflow_operation')->where(['instance_id' => $instance_id])->order(['create_time' => 'DESC'])->find();
         $node = Db::table('workflow_node')->where(['id' => $node_id])->find();
 
-        return Action::create($current_operation['submit_id'], $node['id'], $user_id, $notice);
+        return IstAction::create($current_operation['submit_id'], $node['id'], $user_id, $notice);
     }
 
     /**
@@ -417,9 +417,9 @@ class Scheme
         }
 
         if ($original_user) {
-            return Action::create($last_operation['submit_id'], $last_operation['node_id'], $last_operation['user_id']);
+            return IstAction::create($last_operation['submit_id'], $last_operation['node_id'], $last_operation['user_id']);
         } else {
-            return Action::create($last_operation['submit_id'], $last_operation['node_id']);
+            return IstAction::create($last_operation['submit_id'], $last_operation['node_id']);
         }
     }
 
@@ -434,7 +434,7 @@ class Scheme
         $last_operation = Db::table('workflow_operation')
             ->where([
                 'instance_id' => $instance['id'],
-                'action_type' => ['<>', Action::ACTION_TYPE_SUBMIT]
+                'action_type' => ['<>', IstAction::ACTION_TYPE_SUBMIT]
             ])
             ->order(['create_time' => 'DESC'])
             ->find();

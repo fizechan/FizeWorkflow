@@ -12,7 +12,7 @@ use fize\workflow\SchemeInterface;
  *
  * 单个【实例】可以有多个【提交】
  */
-class SchemeSubmit
+class IstSchemeSubmit
 {
 
     /**

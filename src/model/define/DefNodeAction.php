@@ -10,7 +10,7 @@ use fize\workflow\Db;
 /**
  * 动作
  */
-class NodeAction extends Common
+class DefNodeAction extends Common
 {
 
     /**
@@ -96,7 +96,7 @@ class NodeAction extends Common
     protected static function checkActionType($action_type)
     {
         $allow_action_types = [
-            NodeAction::TYPE_ADOPT, NodeAction::TYPE_REJECT, NodeAction::TYPE_GOBACK, NodeAction::TYPE_HANGUP
+            DefNodeAction::TYPE_ADOPT, DefNodeAction::TYPE_REJECT, DefNodeAction::TYPE_GOBACK, DefNodeAction::TYPE_HANGUP
         ];
         if (in_array($action_type, $allow_action_types)) {
             throw new RuntimeException("非法的操作类型");

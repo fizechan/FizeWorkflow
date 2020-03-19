@@ -10,7 +10,7 @@ use fize\workflow\Scheme as WorkflowScheme;
 /**
  * 方案
  */
-class Scheme
+class DefScheme
 {
 
     /**

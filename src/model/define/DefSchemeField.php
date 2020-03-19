@@ -11,7 +11,7 @@ use fize\workflow\Field;
 /**
  * 方案-字段定义
  */
-class SchemeField
+class DefSchemeField
 {
 
     /**
