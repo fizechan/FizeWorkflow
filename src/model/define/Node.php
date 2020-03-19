@@ -12,13 +12,13 @@ class Node
 {
 
     /**
-     * 方案当前的所有节点
+     * 方案所有节点
      * @param int $def_scheme_id 方案ID
      * @return array 返回所有节点，以层级信息分布
      */
-    public static function current($def_scheme_id)
+    public static function getListBySchemeId($def_scheme_id)
     {
-        $rows = Db::table('workflow_def_node')->where(['def_scheme_id' => $def_scheme_id])->order(['level' => 'ASC'])->select();
+        $rows = Db::table('workflow_def_node')->where(['def_scheme_id' => $def_scheme_id])->order(['is_start' => 'DESC', 'is_end' => 'ASC'])->select();
         if (!$rows) {
             return [];
         }
