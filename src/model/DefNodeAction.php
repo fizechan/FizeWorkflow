@@ -15,15 +15,12 @@ class DefNodeAction extends Common
 
     /**
      * 获取指定节点的所有动作
-     * @param int $node_id 节点ID
+     * @param int $def_node_id 节点ID
      * @return array
      */
-    public static function getListByNodeId($node_id)
+    public static function getListByNodeId($def_node_id)
     {
-        $rows = Db::table('workflow_action')->where(['node_id' => $node_id])->order(['sort' => 'ASC', 'id' => 'ASC'])->select();
-        if (!$rows) {
-            return [];
-        }
+        $rows = Db::table('workflow_def_node_action')->where(['def_node_id' => $def_node_id])->order(['sort' => 'ASC', 'id' => 'ASC'])->select();
         return $rows;
     }
 

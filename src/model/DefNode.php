@@ -19,9 +19,6 @@ class DefNode
     public static function getListBySchemeId($def_scheme_id)
     {
         $rows = Db::table('workflow_def_node')->where(['def_scheme_id' => $def_scheme_id])->order(['is_start' => 'DESC', 'is_end' => 'ASC'])->select();
-        if (!$rows) {
-            return [];
-        }
         $levels_nodes = [];
         foreach ($rows as $row) {
             $levels_nodes[$row['level'] - 1][] = $row;
@@ -31,13 +28,13 @@ class DefNode
 
     /**
      * 返回指定节点的前所有节点
-     * @param int $node_id 节点ID
+     * @param int $def_node_id 节点ID
      * @return array
      */
-    public static function previous($node_id)
+    public static function previous($def_node_id)
     {
-        $node = Db::table('workflow_node')->where(['id' => $node_id])->find();
-        $rows = Db::table('workflow_node')
+        $node = Db::table('workflow_def_node')->where(['id' => $def_node_id])->find();
+        $rows = Db::table('workflow_def_node')
             ->where([
                 'scheme_id' => $node['scheme_id'],
                 'level'     => ['<', $node['level']]
@@ -49,37 +46,48 @@ class DefNode
 
     /**
      * 创建节点
-     * @param int $scheme_id 方案ID
+     * @param int $def_scheme_id 方案ID
      * @param array $levels_nodes 以层级信息分布的待设置的所有节点
      */
-    public static function build($scheme_id, $levels_nodes)
+    public static function build($def_scheme_id, $levels_nodes)
     {
-        Db::table('workflow_node')->where(['scheme_id' => $scheme_id])->delete();
+        Db::table('workflow_def_node')->where(['def_scheme_id' => $def_scheme_id])->delete();
         $datas = [];
         foreach ($levels_nodes as $index => $nodes) {
             foreach ($nodes as $node) {
                 $datas[] = [
-                    'scheme_id' => $scheme_id,
-                    'level'     => $index + 1,
-                    'name'      => $node['name'],
-                    'class'     => $node['class']
+                    'def_scheme_id' => $def_scheme_id,
+                    'level'         => $index + 1,
+                    'name'          => $node['name'],
+                    'class'         => $node['class']
                 ];
             }
         }
-        Db::table('workflow_node')->insertAll($datas);
+        Db::table('workflow_def_node')->insertAll($datas);
     }
 
     /**
      * 删除
-     * @param int $node_id 节点ID
+     * @param int $def_node_id 节点ID
      * @todo 需要添加软删除功能
      */
-    public static function delete($node_id)
+    public static function delete($def_node_id)
     {
-        Db::table('workflow_action')->where(['node_id' => $node_id])->delete();
-        Db::table('workflow_node_role')->where(['node_id' => $node_id])->delete();
-        Db::table('workflow_node')->where(['id' => $node_id])->delete();
-        Db::table('workflow_operation')->where(['node_id' => $node_id])->delete();
+        $ist_action_ids = Db::table('workflow_ist_action')
+            ->where(['def_node_id' => $def_node_id])
+            ->column('id');
+        Db::table('workflow_ist_action_field')->where(['ist_action_id' => ['IN', $ist_action_ids]])->delete();
+        Db::table('workflow_ist_action')->where(['def_node_id' => $def_node_id])->delete();
+        Db::table('workflow_def_node_to')
+            ->where([
+                'from_def_node_id' => ['=', $def_node_id],
+                'to_def_node_id'   => ['=', $def_node_id, 'OR']
+            ])
+            ->delete();
+        Db::table('workflow_def_node_role')->where(['def_node_id' => $def_node_id])->delete();
+        Db::table('workflow_def_node_field')->where(['def_node_id' => $def_node_id])->delete();
+        Db::table('workflow_def_node_action')->where(['def_node_id' => $def_node_id])->delete();
+        Db::table('workflow_def_node')->where(['id' => $def_node_id])->delete();
     }
 
     public static function setTos()

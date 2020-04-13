@@ -8,6 +8,7 @@ use fize\db\definition\Db as Driver;
 
 /**
  * 数据库
+ * @internal 内部使用
  */
 class Db
 {
