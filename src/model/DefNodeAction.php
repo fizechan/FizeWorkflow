@@ -1,16 +1,15 @@
 <?php
 
-
 namespace fize\workflow\model;
 
 use RuntimeException;
-use fize\workflow\Action as Common;
+use fize\workflow\Action;
 use fize\workflow\Db;
 
 /**
  * 动作
  */
-class DefNodeAction extends Common
+class DefNodeAction extends Action
 {
 
     /**
@@ -26,10 +25,10 @@ class DefNodeAction extends Common
 
     /**
      * 添加
-     * @param int $node_id 节点ID
-     * @param int $action_type 操作类型
+     * @param int    $node_id     节点ID
+     * @param int    $action_type 操作类型
      * @param string $action_name 操作名称
-     * @param int $sort 排序，值小靠前
+     * @param int    $sort        排序，值小靠前
      * @return int
      */
     public static function add($node_id, $action_type, $action_name, $sort = 0)
@@ -49,10 +48,10 @@ class DefNodeAction extends Common
     /**
      * 编辑
      * 不允许修改节点ID
-     * @param int $id ID
-     * @param int $action_type 操作类型
+     * @param int    $id          ID
+     * @param int    $action_type 操作类型
      * @param string $action_name 操作名称
-     * @param int $sort 排序，值小靠前
+     * @param int    $sort        排序，值小靠前
      * @return bool
      */
     public static function edit($id, $action_type = null, $action_name = null, $sort = null)
@@ -93,7 +92,10 @@ class DefNodeAction extends Common
     protected static function checkActionType($action_type)
     {
         $allow_action_types = [
-            DefNodeAction::TYPE_ADOPT, DefNodeAction::TYPE_REJECT, DefNodeAction::TYPE_GOBACK, DefNodeAction::TYPE_HANGUP
+            DefNodeAction::TYPE_ADOPT,
+            DefNodeAction::TYPE_REJECT,
+            DefNodeAction::TYPE_GOBACK,
+            DefNodeAction::TYPE_HANGUP
         ];
         if (in_array($action_type, $allow_action_types)) {
             throw new RuntimeException("非法的操作类型");

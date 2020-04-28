@@ -52,10 +52,10 @@ class IstScheme
 
     /**
      * 创建
-     * @param string $name 名称
-     * @param int $scheme_id 方案ID
-     * @param array $fields 传入的表单参数数组
-     * @param int $instance_id 实例ID，指定该参数时表示重新提交
+     * @param string $name        名称
+     * @param int    $scheme_id   方案ID
+     * @param array  $fields      传入的表单参数数组
+     * @param int    $instance_id 实例ID，指定该参数时表示重新提交
      * @return array ['instance_id' => $instance_id, 'submit_id' => $submit_id]
      */
     public static function submit($name, $scheme_id, $fields, $instance_id = null)
@@ -158,7 +158,7 @@ class IstScheme
     /**
      * 重置到最开始节点
      * @param int $instance_id 实例ID
-     * @param int $submit_id 提交ID，不指定则为原提交ID
+     * @param int $submit_id   提交ID，不指定则为原提交ID
      */
     public static function reset($instance_id, $submit_id = null)
     {
@@ -388,10 +388,10 @@ class IstScheme
 
     /**
      * 任意追加符合要求的操作
-     * @param int $instance_id 实例ID
-     * @param int $node_id 节点ID
-     * @param int $user_id 指定工作流用户ID，默认不指定
-     * @param bool $notice 是否发送提醒
+     * @param int  $instance_id 实例ID
+     * @param int  $node_id     节点ID
+     * @param int  $user_id     指定工作流用户ID，默认不指定
+     * @param bool $notice      是否发送提醒
      * @return int 返回操作ID
      */
     public function append($instance_id, $node_id, $user_id = null, $notice = true)
@@ -404,7 +404,7 @@ class IstScheme
 
     /**
      * 再次分配最后执行节点
-     * @param int $instance_id 实例ID
+     * @param int  $instance_id   实例ID
      * @param bool $original_user 是否分配给原操作者，默认true
      * @return int 返回操作ID
      */

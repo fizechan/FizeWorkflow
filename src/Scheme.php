@@ -1,6 +1,5 @@
 <?php
 
-
 namespace fize\workflow;
 
 
@@ -15,7 +14,7 @@ class Scheme implements SchemeInterface
      *
      * 通过改写该方法可以进行差异字段自定义
      * 字段格式为 [$name => $field]，$name 为字段名, $field 含所有的字段属性
-     * @param array $fields 新提交字段
+     * @param array $fields          新提交字段
      * @param array $original_fields 原提交字段
      * @return array [$name => ['title' => *, 'type' => *, 'new' => *, 'old' => *]]
      */

@@ -1,6 +1,5 @@
 <?php
 
-
 namespace fize\workflow\model;
 
 use fize\workflow\Db;
@@ -13,9 +12,9 @@ class User
 
     /**
      * 取得所有用户
-     * @param int $pid 指定父用户ID
-     * @param int $role_id 指定角色ID
-     * @param string $kwd 搜索关键字
+     * @param int    $pid     指定父用户ID
+     * @param int    $role_id 指定角色ID
+     * @param string $kwd     搜索关键字
      * @return array
      */
     public static function getList($pid = null, $role_id = null, $kwd = null)
@@ -43,11 +42,11 @@ class User
 
     /**
      * 取得用户分页
-     * @param int $page 指定页码
-     * @param int $size 每页数量
-     * @param int $pid 指定父用户ID
-     * @param int $role_id 指定角色ID
-     * @param string $kwd 搜索关键字
+     * @param int    $page    指定页码
+     * @param int    $size    每页数量
+     * @param int    $pid     指定父用户ID
+     * @param int    $role_id 指定角色ID
+     * @param string $kwd     搜索关键字
      * @return array [$total, $row]
      */
     public static function getPage($page, $size = 10, $pid = null, $role_id = null, $kwd = null)
@@ -90,11 +89,11 @@ class User
 
     /**
      * 添加
-     * @param int $extend_id 用户外部ID
-     * @param int $role_id 角色ID
-     * @param string $name 名称
-     * @param int $pid 指定上级用户ID
-     * @param float $extend_quota 最高审批额度，为null时表示不指定
+     * @param int    $extend_id    用户外部ID
+     * @param int    $role_id      角色ID
+     * @param string $name         名称
+     * @param int    $pid          指定上级用户ID
+     * @param float  $extend_quota 最高审批额度，为null时表示不指定
      * @return int
      */
     public static function add($extend_id, $role_id, $name, $pid = 0, $extend_quota = null)
@@ -116,12 +115,12 @@ class User
     }
 
     /**
-     * @param int $id 用户ID
-     * @param int $extend_id 外部ID
-     * @param int $role_id 角色ID
-     * @param string $name 名称
-     * @param int $pid 指定上级用户ID
-     * @param mixed $extend_quota 最高审批额度，为null时表示不指定,false表示不修改
+     * @param int    $id           用户ID
+     * @param int    $extend_id    外部ID
+     * @param int    $role_id      角色ID
+     * @param string $name         名称
+     * @param int    $pid          指定上级用户ID
+     * @param mixed  $extend_quota 最高审批额度，为null时表示不指定,false表示不修改
      * @return bool
      */
     public static function edit($id, $extend_id = null, $role_id = null, $name = null, $pid = null, $extend_quota = false)

@@ -1,12 +1,11 @@
 <?php
 
-
 namespace fize\workflow\model;
 
 use fize\workflow\Db;
 
 /**
- * 节点
+ * 定义：节点
  */
 class DefNode
 {
@@ -18,7 +17,10 @@ class DefNode
      */
     public static function getListBySchemeId($def_scheme_id)
     {
-        $rows = Db::table('workflow_def_node')->where(['def_scheme_id' => $def_scheme_id])->order(['is_start' => 'DESC', 'is_end' => 'ASC'])->select();
+        $rows = Db::table('workflow_def_node')
+            ->where(['def_scheme_id' => $def_scheme_id])
+            ->order(['is_start' => 'DESC', 'is_end' => 'ASC'])
+            ->select();
         $levels_nodes = [];
         foreach ($rows as $row) {
             $levels_nodes[$row['level'] - 1][] = $row;
@@ -46,8 +48,8 @@ class DefNode
 
     /**
      * 创建节点
-     * @param int $def_scheme_id 方案ID
-     * @param array $levels_nodes 以层级信息分布的待设置的所有节点
+     * @param int   $def_scheme_id 方案ID
+     * @param array $levels_nodes  以层级信息分布的待设置的所有节点
      */
     public static function build($def_scheme_id, $levels_nodes)
     {

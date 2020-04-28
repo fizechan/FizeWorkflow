@@ -1,11 +1,10 @@
 <?php
 
-
 namespace fize\workflow\model;
 
 use RuntimeException;
 use fize\misc\Preg;
-use fize\workflow\Action as Common;
+use fize\workflow\Action;
 use fize\workflow\Db;
 use fize\workflow\NodeInterface;
 use fize\workflow\SchemeInterface;
@@ -13,15 +12,15 @@ use fize\workflow\SchemeInterface;
 /**
  * 模型：操作记录
  */
-class IstAction extends Common
+class IstAction extends Action
 {
 
     /**
      * 创建操作
-     * @param int $submit_id 提交ID
-     * @param int $node_id 节点ID
-     * @param int $user_id 用户ID
-     * @param bool $notice 是否发送提醒
+     * @param int  $submit_id 提交ID
+     * @param int  $node_id   节点ID
+     * @param int  $user_id   用户ID
+     * @param bool $notice    是否发送提醒
      * @return int 返回操作ID
      */
     public static function create($submit_id, $node_id, $user_id = null, $notice = true)
@@ -53,7 +52,7 @@ class IstAction extends Common
     /**
      * 分配用户
      * @param int $operation_id 操作ID
-     * @param int $user_id 指定接收用户ID
+     * @param int $user_id      指定接收用户ID
      * @return int|null 返回用户ID,无法分配时返回null
      */
     public static function distribute($operation_id, $user_id = null)
@@ -107,8 +106,8 @@ class IstAction extends Common
 
     /**
      * 审批通过
-     * @param int $operation_id 操作ID
-     * @param array $fields 提交的表单数据
+     * @param int   $operation_id  操作ID
+     * @param array $fields        提交的表单数据
      * @param array $node_user_tos 指定要接收的下级节点及用户,如果指定，则马上进行下级任务分发
      * @todo 参数$node_user_tos考虑移除
      */
@@ -179,8 +178,8 @@ class IstAction extends Common
     /**
      * 审核否决
      * 否决后默认是执行了方案否决方法，但是也可以重写该方法来执行特殊事务
-     * @param int $operation_id 操作ID
-     * @param array $fields 表单数组
+     * @param int   $operation_id 操作ID
+     * @param array $fields       表单数组
      */
     public static function reject($operation_id, $fields)
     {
@@ -222,10 +221,10 @@ class IstAction extends Common
     /**
      * 审核退回
      * 一般是退回上一个节点，但是也可以重写该方法来执行特殊事务
-     * @param int $operation_id 操作ID
-     * @param array $fields 数据数组
-     * @param int $to_node_id 返回到指定节点ID，如果为0，则执行方案的退回操作
-     * @param int $to_operation_id 返回到指定操作ID，如果为0，则执行方案的退回操作
+     * @param int   $operation_id    操作ID
+     * @param array $fields          数据数组
+     * @param int   $to_node_id      返回到指定节点ID，如果为0，则执行方案的退回操作
+     * @param int   $to_operation_id 返回到指定操作ID，如果为0，则执行方案的退回操作
      * @todo 参数$to_node_id考虑移除，添加参数$to_user_id
      */
     public static function goback($operation_id, $fields, $to_node_id = null, $to_operation_id = null)
@@ -293,8 +292,8 @@ class IstAction extends Common
     /**
      * 审核挂起
      * 挂起方法一般为外部使用，目前就挂起操作而言，没有实际意义，仅产生一条挂起记录
-     * @param int $operation_id 操作ID
-     * @param array $fields 数据数组
+     * @param int   $operation_id 操作ID
+     * @param array $fields       数据数组
      */
     public static function hangup($operation_id, $fields = null)
     {
@@ -335,9 +334,9 @@ class IstAction extends Common
 
     /**
      * 任务调度
-     * @param int $operation_id 操作ID
-     * @param int $user_id 接收调度的用户ID
-     * @param array $fields 附加数据数组
+     * @param int   $operation_id 操作ID
+     * @param int   $user_id      接收调度的用户ID
+     * @param array $fields       附加数据数组
      */
     public static function dispatch($operation_id, $user_id, $fields = null)
     {
@@ -366,9 +365,9 @@ class IstAction extends Common
 
     /**
      * 统一执行接口
-     * @param int $operation_id 操作ID
-     * @param array $fields 数据表单
-     * @param int $action_id 动作ID
+     * @param int   $operation_id 操作ID
+     * @param array $fields       数据表单
+     * @param int   $action_id    动作ID
      * @todo 如何统一传入其他参数
      */
     public static function action($operation_id, $fields, $action_id)
@@ -412,10 +411,10 @@ class IstAction extends Common
 
     /**
      * 保存动作
-     * @param int $operation_id 操作记录ID
-     * @param int $action_id 动作ID
-     * @param int $action_type 动作类型
-     * @param string $action_name 动作描述
+     * @param int    $operation_id 操作记录ID
+     * @param int    $action_id    动作ID
+     * @param int    $action_type  动作类型
+     * @param string $action_name  动作描述
      */
     protected static function saveAction($operation_id, $action_id, $action_type = null, $action_name = null)
     {
@@ -436,8 +435,8 @@ class IstAction extends Common
 
     /**
      * 保存数据
-     * @param int $operation_id 操作记录ID
-     * @param array $fields 提交表单数据
+     * @param int   $operation_id 操作记录ID
+     * @param array $fields       提交表单数据
      */
     protected static function saveFields($operation_id, $fields)
     {
@@ -468,7 +467,7 @@ class IstAction extends Common
      * @param int $instance_id 实例ID
      * @return array
      * @todo 待验证必要性
-     * 取得工作流实例所有直线操作记录
+     *                         取得工作流实例所有直线操作记录
      */
     public static function getPrevJson($instance_id)
     {
@@ -488,9 +487,9 @@ class IstAction extends Common
 
     /**
      * 列表分页
-     * @param int $page 页码
-     * @param int $size 每页记录数量，默认每页10个
-     * @param mixed $where 条件
+     * @param int          $page  页码
+     * @param int          $size  每页记录数量，默认每页10个
+     * @param mixed        $where 条件
      * @param array|string $order 排序
      * @return array [记录个数, 总页数、记录数组]
      */
@@ -523,8 +522,8 @@ class IstAction extends Common
 
     /**
      * 返回操作ID对应的项目之前的操作记录
-     * @param int $operation_id 操作记录
-     * @param bool $with_self 是否包含自身记录
+     * @param int  $operation_id 操作记录
+     * @param bool $with_self    是否包含自身记录
      * @return array
      */
     public static function getPreviousOperations($operation_id, $with_self = false)

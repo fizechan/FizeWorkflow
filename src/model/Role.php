@@ -1,6 +1,5 @@
 <?php
 
-
 namespace fize\workflow\model;
 
 use fize\workflow\Db;
@@ -40,7 +39,7 @@ class Role
     /**
      * 添加
      * @param string $name 名称
-     * @param int $pid 指定上级角色ID
+     * @param int    $pid  指定上级角色ID
      * @return int 新增角色ID
      */
     public static function add($name, $pid = 0)
@@ -56,9 +55,9 @@ class Role
 
     /**
      * 编辑
-     * @param int $id 角色ID
+     * @param int    $id   角色ID
      * @param string $name 名称
-     * @param int $pid 指定上级角色ID
+     * @param int    $pid  指定上级角色ID
      * @return bool
      */
     public static function edit($id, $name = null, $pid = null)

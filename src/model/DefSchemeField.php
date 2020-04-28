@@ -1,6 +1,5 @@
 <?php
 
-
 namespace fize\workflow\model;
 
 use RuntimeException;
@@ -16,8 +15,8 @@ class DefSchemeField
 
     /**
      * 添加
-     * @param int $scheme_id 方案ID
-     * @param array $field 字段属性
+     * @param int   $scheme_id 方案ID
+     * @param array $field     字段属性
      * @return int 返回字段ID
      */
     public static function add($scheme_id, $field)

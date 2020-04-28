@@ -1,6 +1,5 @@
 <?php
 
-
 namespace fize\workflow\model;
 
 use fize\crypt\Json;

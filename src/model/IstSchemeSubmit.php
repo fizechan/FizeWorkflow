@@ -1,6 +1,5 @@
 <?php
 
-
 namespace fize\workflow\model;
 
 use fize\crypt\Json;
@@ -17,16 +16,19 @@ class IstSchemeSubmit
 
     /**
      * 返回表单字段
-     * @param int $submit_id 提交ID
+     * @param int  $submit_id  提交ID
      * @param bool $with_value 是否附带值
-     * @param bool $key_name 是否将name作为键名
+     * @param bool $key_name   是否将name作为键名
      * @return array
      */
     public static function getFields($submit_id, $with_value = true, $key_name = false)
     {
         $submit = Db::table('workflow_submit')->where(['id' => $submit_id])->find();
         $instance = Db::table('workflow_instance')->where(['id' => $submit['instance_id']])->find();
-        $fields = Db::table('workflow_scheme_field')->where(['scheme_id' => $instance['scheme_id']])->order(['sort' => 'ASC', 'create_time' => 'ASC'])->select();
+        $fields = Db::table('workflow_scheme_field')
+            ->where(['scheme_id' => $instance['scheme_id']])
+            ->order(['sort' => 'ASC', 'create_time' => 'ASC'])
+            ->select();
         foreach ($fields as $index => $field) {
             if ($field['attrs']) {
                 $fields[$index]['attrs'] = Json::decode($field['attrs']);
@@ -61,7 +63,7 @@ class IstSchemeSubmit
 
     /**
      * 返回差异字段
-     * @param int $submit_id 提交ID
+     * @param int $submit_id          提交ID
      * @param int $original_submit_id 对比提交ID
      * @return array [$name => ['title' => *, 'type' => *, 'new' => *, 'old' => *]]
      */
