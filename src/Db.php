@@ -2,8 +2,8 @@
 
 namespace fize\workflow;
 
-use fize\db\Db as FizeDb;
-use fize\db\core\Db as Driver;
+use fize\database\core\Db as Driver;
+use fize\database\Db as FizeDb;
 
 /**
  * 数据库
@@ -19,11 +19,11 @@ class Db
 
     /**
      * 初始化
-     * @param string $type   数据库类型
-     * @param array  $config 数据库配置项
-     * @param string $mode   连接模式
+     * @param string      $type   数据库类型
+     * @param array       $config 数据库配置项
+     * @param string|null $mode   连接模式
      */
-    public function __construct($type, array $config, $mode = null)
+    public function __construct(string $type, array $config, string $mode = null)
     {
         self::$db = FizeDb::connect($type, $config, $mode);
     }
@@ -33,11 +33,22 @@ class Db
      * @param string   $sql      SQL语句，支持原生的pdo问号预处理
      * @param array    $params   可选的绑定参数
      * @param callable $callback 如果定义该记录集回调函数则不返回数组而直接进行循环回调
-     * @return array|int|string SELECT语句返回数组，INSERT/REPLACE返回自增ID，其余返回受影响行数。
+     * @return array 返回数组
      */
-    public static function query($sql, array $params = [], callable $callback = null)
+    public static function query(string $sql, array $params = [], callable $callback = null): array
     {
         return self::$db->query($sql, $params, $callback);
+    }
+
+    /**
+     * 执行一个SQL语句
+     * @param string $sql    SQL语句，支持问号预处理语句
+     * @param array  $params 可选的绑定参数
+     * @return int 返回受影响行数
+     */
+    public static function execute(string $sql, array $params = []): int
+    {
+        return self::$db->execute($sql, $params);
     }
 
     /**
@@ -66,11 +77,11 @@ class Db
 
     /**
      * 指定当前要操作的表,支持链式调用
-     * @param string $name   表名
-     * @param string $prefix 表前缀，默认为null表示使用当前前缀
+     * @param string      $name   表名
+     * @param string|null $prefix 表前缀，默认为null表示使用当前前缀
      * @return Driver
      */
-    public static function table($name, $prefix = null)
+    public static function table(string $name, string $prefix = null): Driver
     {
         return self::$db->table($name, $prefix);
     }
@@ -82,7 +93,7 @@ class Db
      * @param bool $real 是否返回最终SQL语句而非预处理语句
      * @return string
      */
-    public static function getLastSql($real = false)
+    public static function getLastSql(bool $real = false): string
     {
         return self::$db->getLastSql($real);
     }

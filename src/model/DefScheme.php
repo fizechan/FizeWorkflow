@@ -14,12 +14,12 @@ class DefScheme
 
     /**
      * 创建
-     * @param string $name  名称
-     * @param string $class 逻辑类全限定名
-     * @param string $type  自定义类型
+     * @param string      $name  名称
+     * @param string|null $class 逻辑类全限定名
+     * @param string|null $type  自定义类型
      * @return int 返回方案ID
      */
-    public static function create($name, $class = null, $type = null)
+    public static function create(string $name, string $class = null, string $type = null): int
     {
         if (is_null($class)) {
             $class = WorkflowScheme::class;
@@ -37,7 +37,7 @@ class DefScheme
      * @param int $def_scheme_id 方案ID
      * @return array
      */
-    public static function getFields($def_scheme_id)
+    public static function getFields(int $def_scheme_id): array
     {
         $rows = Db::table('workflow_scheme_field')->where(['scheme_id' => $def_scheme_id])->order(['sort' => 'ASC', 'create_time' => 'ASC'])->select();
         foreach ($rows as $index => $row) {
@@ -56,7 +56,7 @@ class DefScheme
      * @param int $def_scheme_id 方案ID
      * @return int 新的方案ID
      */
-    public static function copy($def_scheme_id)
+    public static function copy(int $def_scheme_id): int
     {
         $scheme = Db::table('def_workflow_scheme')->where(['id' => $def_scheme_id])->find();
 
@@ -140,7 +140,7 @@ class DefScheme
      * @param int $id ID
      * @todo 待修改
      */
-    public static function delete($id)
+    public static function delete(int $id)
     {
         $instance = Db::table('workflow_instance')->where(['scheme_id' => $id])->find();
         Db::table('workflow_contrast')->where(['instance_id' => $instance['id']])->delete();

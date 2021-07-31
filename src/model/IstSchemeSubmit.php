@@ -21,7 +21,7 @@ class IstSchemeSubmit
      * @param bool $key_name   是否将name作为键名
      * @return array
      */
-    public static function getFields($submit_id, $with_value = true, $key_name = false)
+    public static function getFields(int $submit_id, bool $with_value = true, bool $key_name = false): array
     {
         $submit = Db::table('workflow_submit')->where(['id' => $submit_id])->find();
         $instance = Db::table('workflow_instance')->where(['id' => $submit['instance_id']])->find();
@@ -63,11 +63,11 @@ class IstSchemeSubmit
 
     /**
      * 返回差异字段
-     * @param int $submit_id          提交ID
-     * @param int $original_submit_id 对比提交ID
+     * @param int      $submit_id          提交ID
+     * @param int|null $original_submit_id 对比提交ID
      * @return array [$name => ['title' => *, 'type' => *, 'new' => *, 'old' => *]]
      */
-    protected static function getContrasts($submit_id, $original_submit_id = null)
+    protected static function getContrasts(int $submit_id, int $original_submit_id = null): array
     {
         $submit = Db::table('workflow_submit')->where(['id' => $submit_id])->find();
         $instance = Db::table('workflow_instance')->where(['id' => $submit['instance_id']])->find();

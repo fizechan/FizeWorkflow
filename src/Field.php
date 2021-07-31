@@ -12,7 +12,7 @@ class Field
      * 全部可用字段类型
      * @return string[]
      */
-    public static function getAvailableFieldTypes()
+    public static function getAvailableFieldTypes(): array
     {
         return [
             // button 标签

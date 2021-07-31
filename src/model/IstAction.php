@@ -2,12 +2,11 @@
 
 namespace fize\workflow\model;
 
-use RuntimeException;
-use fize\misc\Preg;
 use fize\workflow\Action;
 use fize\workflow\Db;
 use fize\workflow\NodeInterface;
 use fize\workflow\SchemeInterface;
+use RuntimeException;
 
 /**
  * 模型：操作记录
@@ -17,13 +16,13 @@ class IstAction extends Action
 
     /**
      * 创建操作
-     * @param int  $submit_id 提交ID
-     * @param int  $node_id   节点ID
-     * @param int  $user_id   用户ID
-     * @param bool $notice    是否发送提醒
+     * @param int      $submit_id 提交ID
+     * @param int      $node_id   节点ID
+     * @param int|null $user_id   用户ID
+     * @param bool     $notice    是否发送提醒
      * @return int 返回操作ID
      */
-    public static function create($submit_id, $node_id, $user_id = null, $notice = true)
+    public static function create(int $submit_id, int $node_id, int $user_id = null, bool $notice = true): int
     {
         $instance_id = Db::table('workflow_submit')->where(['id' => $submit_id])->value('instance_id');
         $node = Db::table('workflow_node')->where(['id' => $node_id])->find();
@@ -51,11 +50,11 @@ class IstAction extends Action
 
     /**
      * 分配用户
-     * @param int $operation_id 操作ID
-     * @param int $user_id      指定接收用户ID
+     * @param int      $operation_id 操作ID
+     * @param int|null $user_id      指定接收用户ID
      * @return int|null 返回用户ID,无法分配时返回null
      */
-    public static function distribute($operation_id, $user_id = null)
+    public static function distribute(int $operation_id, int $user_id = null)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
         $node = Db::table('workflow_node')->where(['id' => $operation['node_id']])->find();
@@ -84,7 +83,7 @@ class IstAction extends Action
      * @param int $limit 分配数量，为0表示所有
      * @return int 返回分配个数
      */
-    public static function distributeAll($limit = 0)
+    public static function distributeAll(int $limit = 0): int
     {
         $count = 0;
 
@@ -106,15 +105,15 @@ class IstAction extends Action
 
     /**
      * 审批通过
-     * @param int   $operation_id  操作ID
-     * @param array $fields        提交的表单数据
-     * @param array $node_user_tos 指定要接收的下级节点及用户,如果指定，则马上进行下级任务分发
+     * @param int        $operation_id  操作ID
+     * @param array      $fields        提交的表单数据
+     * @param array|null $node_user_tos 指定要接收的下级节点及用户,如果指定，则马上进行下级任务分发
      * @todo 参数$node_user_tos考虑移除
      */
-    public static function adopt($operation_id, $fields, $node_user_tos = null)
+    public static function adopt(int $operation_id, array $fields, array $node_user_tos = null)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
-        if (!in_array((int)$operation['action_type'], [IstAction::TYPE_UNEXECUTED, IstAction::TYPE_HANGUP])) {
+        if (!in_array((int)$operation['action_type'], [Action::TYPE_UNEXECUTED, Action::TYPE_HANGUP])) {
             throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
         }
         $instance = Db::table('workflow_instance')->where(['id' => $operation['instance_id']])->find();
@@ -181,10 +180,10 @@ class IstAction extends Action
      * @param int   $operation_id 操作ID
      * @param array $fields       表单数组
      */
-    public static function reject($operation_id, $fields)
+    public static function reject(int $operation_id, array $fields)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
-        if (!in_array((int)$operation['action_type'], [IstAction::TYPE_UNEXECUTED, IstAction::TYPE_HANGUP])) {
+        if (!in_array((int)$operation['action_type'], [Action::TYPE_UNEXECUTED, Action::TYPE_HANGUP])) {
             throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
         }
 
@@ -221,13 +220,13 @@ class IstAction extends Action
     /**
      * 审核退回
      * 一般是退回上一个节点，但是也可以重写该方法来执行特殊事务
-     * @param int   $operation_id    操作ID
-     * @param array $fields          数据数组
-     * @param int   $to_node_id      返回到指定节点ID，如果为0，则执行方案的退回操作
-     * @param int   $to_operation_id 返回到指定操作ID，如果为0，则执行方案的退回操作
+     * @param int      $operation_id    操作ID
+     * @param array    $fields          数据数组
+     * @param int|null $to_node_id      返回到指定节点ID，如果为0，则执行方案的退回操作
+     * @param int|null $to_operation_id 返回到指定操作ID，如果为0，则执行方案的退回操作
      * @todo 参数$to_node_id考虑移除，添加参数$to_user_id
      */
-    public static function goback($operation_id, $fields, $to_node_id = null, $to_operation_id = null)
+    public static function goback(int $operation_id, array $fields, int $to_node_id = null, int $to_operation_id = null)
     {
         if (is_null($to_node_id) && is_null($to_operation_id)) {
             throw new RuntimeException('节点ID和操作ID必须指定1个！');
@@ -237,7 +236,7 @@ class IstAction extends Action
         }
 
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
-        if (!in_array((int)$operation['action_type'], [IstAction::TYPE_UNEXECUTED, IstAction::TYPE_HANGUP])) {
+        if (!in_array((int)$operation['action_type'], [Action::TYPE_UNEXECUTED, Action::TYPE_HANGUP])) {
             throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
         }
 
@@ -292,13 +291,13 @@ class IstAction extends Action
     /**
      * 审核挂起
      * 挂起方法一般为外部使用，目前就挂起操作而言，没有实际意义，仅产生一条挂起记录
-     * @param int   $operation_id 操作ID
-     * @param array $fields       数据数组
+     * @param int        $operation_id 操作ID
+     * @param array|null $fields       数据数组
      */
-    public static function hangup($operation_id, $fields = null)
+    public static function hangup(int $operation_id, array $fields = null)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
-        if (!in_array((int)$operation['action_type'], [IstAction::TYPE_UNEXECUTED])) {
+        if (!in_array((int)$operation['action_type'], [Action::TYPE_UNEXECUTED])) {
             throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
         }
 
@@ -334,14 +333,14 @@ class IstAction extends Action
 
     /**
      * 任务调度
-     * @param int   $operation_id 操作ID
-     * @param int   $user_id      接收调度的用户ID
-     * @param array $fields       附加数据数组
+     * @param int        $operation_id 操作ID
+     * @param int        $user_id      接收调度的用户ID
+     * @param array|null $fields       附加数据数组
      */
-    public static function dispatch($operation_id, $user_id, $fields = null)
+    public static function dispatch(int $operation_id, int $user_id, array $fields = null)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
-        if (!in_array((int)$operation['action_type'], [IstAction::TYPE_UNEXECUTED, IstAction::TYPE_HANGUP])) {
+        if (!in_array((int)$operation['action_type'], [Action::TYPE_UNEXECUTED, Action::TYPE_HANGUP])) {
             throw new RuntimeException('该操作节点已进行过操作，无法再次执行！');
         }
 
@@ -351,7 +350,7 @@ class IstAction extends Action
                 self::saveFields($operation_id, $fields);
             }
 
-            self::saveAction($operation_id, 0, IstAction::TYPE_DISPATCH, '已调度');
+            self::saveAction($operation_id, 0, Action::TYPE_DISPATCH, '已调度');
 
             $to_operation_id = self::create($operation['submit_id'], $operation['node_id'], $user_id);
             self::ignoreBefore($to_operation_id);
@@ -370,18 +369,18 @@ class IstAction extends Action
      * @param int   $action_id    动作ID
      * @todo 如何统一传入其他参数
      */
-    public static function action($operation_id, $fields, $action_id)
+    public static function action(int $operation_id, array $fields, int $action_id)
     {
         $action = Db::table('workflow_action')->where(['id' => $action_id])->find();
         self::saveAction($operation_id, $action['id'], $action['type'], $action['name']);
 
-        if ($action['type'] == IstAction::TYPE_ADOPT) {  // 通过
+        if ($action['type'] == Action::TYPE_ADOPT) {  // 通过
             self::adopt($operation_id, $fields);
-        } elseif ($action['type'] == IstAction::TYPE_REJECT) {  // 否决
+        } elseif ($action['type'] == Action::TYPE_REJECT) {  // 否决
             self::reject($operation_id, $fields);
-        } elseif ($action['type'] == IstAction::TYPE_GOBACK) {  // 退回
+        } elseif ($action['type'] == Action::TYPE_GOBACK) {  // 退回
             self::goback($operation_id, $fields);
-        } elseif ($action['type'] == IstAction::TYPE_HANGUP) {  // 挂起
+        } elseif ($action['type'] == Action::TYPE_HANGUP) {  // 挂起
             self::hangup($operation_id, $fields);
         }
 
@@ -392,18 +391,18 @@ class IstAction extends Action
      * 对指定操作ID相关的之前操作节点进行无需操作处理
      * @param int $operation_id 操作ID
      */
-    protected static function ignoreBefore($operation_id)
+    protected static function ignoreBefore(int $operation_id)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
         $map = [
             'instance_id' => ['=', $operation['instance_id']],
             'create_time' => ['<', $operation['create_time']],
-            'action_type' => ['=', IstAction::TYPE_UNEXECUTED]
+            'action_type' => ['=', Action::TYPE_UNEXECUTED]
         ];
         $data = [
             'action_id'   => 0,
             'action_name' => '无需操作',
-            'action_type' => IstAction::TYPE_DISUSE,
+            'action_type' => Action::TYPE_DISUSE,
             'action_time' => date('Y-m-d H:i:s')
         ];
         Db::table('workflow_operation')->where($map)->update($data);
@@ -411,12 +410,12 @@ class IstAction extends Action
 
     /**
      * 保存动作
-     * @param int    $operation_id 操作记录ID
-     * @param int    $action_id    动作ID
-     * @param int    $action_type  动作类型
-     * @param string $action_name  动作描述
+     * @param int         $operation_id 操作记录ID
+     * @param int         $action_id    动作ID
+     * @param int|null    $action_type  动作类型
+     * @param string|null $action_name  动作描述
      */
-    protected static function saveAction($operation_id, $action_id, $action_type = null, $action_name = null)
+    protected static function saveAction(int $operation_id, int $action_id, int $action_type = null, string $action_name = null)
     {
         if (is_null($action_type)) {
             $action_type = Db::table('workflow_action')->where(['id' => $action_id])->value('type');
@@ -438,7 +437,7 @@ class IstAction extends Action
      * @param int   $operation_id 操作记录ID
      * @param array $fields       提交表单数据
      */
-    protected static function saveFields($operation_id, $fields)
+    protected static function saveFields(int $operation_id, array $fields)
     {
         $operation = Db::table('workflow_operation')->where(['id' => $operation_id])->find();
         $data_operation_fields = [];
@@ -448,7 +447,7 @@ class IstAction extends Action
                 throw new RuntimeException("字段{$n}必须填写");
             }
             if ($field['regex_match']) {
-                if (!Preg::match($field['regex_match'], $v)) {
+                if (!preg_match($field['regex_match'], $v)) {
                     throw new RuntimeException("字段{$n}不符合规则");
                 }
             }
@@ -469,11 +468,11 @@ class IstAction extends Action
      * @todo 待验证必要性
      *                         取得工作流实例所有直线操作记录
      */
-    public static function getPrevJson($instance_id)
+    public static function getPrevJson(int $instance_id): array
     {
         $map = [
             'instance_id' => ['=', $instance_id],
-            'action_type' => ['<>', IstAction::TYPE_UNEXECUTED]
+            'action_type' => ['<>', Action::TYPE_UNEXECUTED]
         ];
         $operations = Db::table('workflow_operation')
             ->where($map)
@@ -493,7 +492,7 @@ class IstAction extends Action
      * @param array|string $order 排序
      * @return array [记录个数, 总页数、记录数组]
      */
-    public static function getPage($page, $size = 10, $where = null, $order = null)
+    public static function getPage(int $page, int $size = 10, $where = null, $order = null): array
     {
         $result = Db::table('workflow_operation')
             ->alias('t_operation')
@@ -526,7 +525,7 @@ class IstAction extends Action
      * @param bool $with_self    是否包含自身记录
      * @return array
      */
-    public static function getPreviousOperations($operation_id, $with_self = false)
+    public static function getPreviousOperations(int $operation_id, bool $with_self): array
     {
         $operator = "<";
         if ($with_self) {
@@ -558,7 +557,7 @@ class IstAction extends Action
      * @param int $submit_id 提交ID
      * @return array
      */
-    public static function getListBySubmitId($submit_id)
+    public static function getListBySubmitId(int $submit_id): array
     {
         $rows = Db::table('workflow_operation')
             ->alias('t_operation')
@@ -581,7 +580,7 @@ class IstAction extends Action
      * @param int $instance_id 实例ID
      * @return array
      */
-    public static function getListByInstanceId($instance_id)
+    public static function getListByInstanceId(int $instance_id): array
     {
         $rows = Db::table('workflow_operation')
             ->alias('t_operation')

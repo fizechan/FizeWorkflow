@@ -2,10 +2,10 @@
 
 namespace fize\workflow\model;
 
-use RuntimeException;
 use fize\crypt\Json;
 use fize\workflow\Db;
 use fize\workflow\Field;
+use RuntimeException;
 
 /**
  * 方案-字段定义
@@ -19,7 +19,7 @@ class DefSchemeField
      * @param array $field     字段属性
      * @return int 返回字段ID
      */
-    public static function add($scheme_id, $field)
+    public static function add(int $scheme_id, array $field): int
     {
         if (!in_array($field['type'], array_keys(Field::getAvailableFieldTypes()))) {
             throw new RuntimeException("不可用的字段类型：{$field['type']}！");

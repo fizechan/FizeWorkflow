@@ -8,18 +8,17 @@
       "email": "chenfengzhan@qq.com"
     }
   ],
-  "require": {
-    "php": ">=7.0.0",
-    "fize/misc": "~0.1.0",
-    "fize/db": "~2.6.0",
-    "fize/crypt": "~3.2.0"
-  },
-  "require-dev": {
-    "phpunit/phpunit": "~9.1.0"
-  },
   "autoload": {
     "psr-4": {
       "fize\\workflow\\": "src"
     }
+  },
+  "require": {
+    "php": ">=7.0.0",
+    "fize/crypt": "^3.2.0",
+    "fize/database": "^3.1.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.5.0"
   }
 }

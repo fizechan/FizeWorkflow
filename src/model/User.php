@@ -12,12 +12,12 @@ class User
 
     /**
      * 取得所有用户
-     * @param int    $pid     指定父用户ID
-     * @param int    $role_id 指定角色ID
-     * @param string $kwd     搜索关键字
+     * @param int|null    $pid     指定父用户ID
+     * @param int|null    $role_id 指定角色ID
+     * @param string|null $kwd     搜索关键字
      * @return array
      */
-    public static function getList($pid = null, $role_id = null, $kwd = null)
+    public static function getList(int $pid = null, int $role_id = null, string $kwd = null): array
     {
         $map = [];
         if ($pid) {
@@ -42,14 +42,14 @@ class User
 
     /**
      * 取得用户分页
-     * @param int    $page    指定页码
-     * @param int    $size    每页数量
-     * @param int    $pid     指定父用户ID
-     * @param int    $role_id 指定角色ID
-     * @param string $kwd     搜索关键字
+     * @param int         $page    指定页码
+     * @param int         $size    每页数量
+     * @param int|null    $pid     指定父用户ID
+     * @param int|null    $role_id 指定角色ID
+     * @param string|null $kwd     搜索关键字
      * @return array [$total, $row]
      */
-    public static function getPage($page, $size = 10, $pid = null, $role_id = null, $kwd = null)
+    public static function getPage(int $page, int $size = 10, int $pid = null, int $role_id = null, string $kwd = null): array
     {
         $map = [];
         if ($pid) {
@@ -77,7 +77,7 @@ class User
      * @param int $role_id 角色ID
      * @return array
      */
-    public static function getProleUsers($role_id)
+    public static function getProleUsers(int $role_id): array
     {
         $role = Db::table('workflow_role')->where(['id' => $role_id])->find();
         $users = Db::table('workflow_user')->where(['role_id' => $role['pid']])->select();
@@ -89,14 +89,14 @@ class User
 
     /**
      * 添加
-     * @param int    $extend_id    用户外部ID
-     * @param int    $role_id      角色ID
-     * @param string $name         名称
-     * @param int    $pid          指定上级用户ID
-     * @param float  $extend_quota 最高审批额度，为null时表示不指定
+     * @param int        $extend_id    用户外部ID
+     * @param int        $role_id      角色ID
+     * @param string     $name         名称
+     * @param int        $pid          指定上级用户ID
+     * @param float|null $extend_quota 最高审批额度，为null时表示不指定
      * @return int
      */
-    public static function add($extend_id, $role_id, $name, $pid = 0, $extend_quota = null)
+    public static function add(int $extend_id, int $role_id, string $name, int $pid = 0, float $extend_quota = null): int
     {
 //        $find = Db::name('workflow_user')->where('extend_id', '=', $extend_id)->find();
 //        if($find){
@@ -115,15 +115,15 @@ class User
     }
 
     /**
-     * @param int    $id           用户ID
-     * @param int    $extend_id    外部ID
-     * @param int    $role_id      角色ID
-     * @param string $name         名称
-     * @param int    $pid          指定上级用户ID
-     * @param mixed  $extend_quota 最高审批额度，为null时表示不指定,false表示不修改
+     * @param int         $id           用户ID
+     * @param int|null    $extend_id    外部ID
+     * @param int|null    $role_id      角色ID
+     * @param string|null $name         名称
+     * @param int|null    $pid          指定上级用户ID
+     * @param mixed       $extend_quota 最高审批额度，为null时表示不指定,false表示不修改
      * @return bool
      */
-    public static function edit($id, $extend_id = null, $role_id = null, $name = null, $pid = null, $extend_quota = false)
+    public static function edit(int $id, int $extend_id = null, int $role_id = null, string $name = null, int $pid = null, $extend_quota = false): bool
     {
 //        $map = [
 //            ['id', '<>', $id],
@@ -154,7 +154,7 @@ class User
         }
 
         $result = Db::table('workflow_user')->where(['id' => $id])->update($data);
-        return $result ? true : false;
+        return (bool)$result;
     }
 
     /**
@@ -162,7 +162,7 @@ class User
      * @param int $id 角色ID
      * @return bool
      */
-    public static function delete($id)
+    public static function delete(int $id): bool
     {
         $child = Db::table('workflow_user')->where(['pid' => $id])->find();
         if ($child) {
@@ -170,6 +170,6 @@ class User
             return false;
         }
         $result = Db::table('workflow_user')->where(['id' => $id])->delete();
-        return $result ? true : false;
+        return (bool)$result;
     }
 }

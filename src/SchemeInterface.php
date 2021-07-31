@@ -17,41 +17,41 @@ interface SchemeInterface
      * @param array $original_fields 原提交字段
      * @return array [$name => ['title' => *, 'type' => *, 'new' => *, 'old' => *]]
      */
-    public static function getSubmitContrasts($fields, $original_fields);
+    public static function getSubmitContrasts(array $fields, array $original_fields): array;
 
     /**
      * 审批通过
      * @param int $instance_id 实例ID
      */
-    public static function adopt($instance_id);
+    public static function adopt(int $instance_id);
 
     /**
      * 审批否决
      * @param int $instance_id 实例ID
      */
-    public static function reject($instance_id);
+    public static function reject(int $instance_id);
 
     /**
      * 审批退回
      * @param int $instance_id 实例ID
      */
-    public static function goback($instance_id);
+    public static function goback(int $instance_id);
 
     /**
      * 审批挂起
      * @param int $instance_id 实例ID
      */
-    public static function hangup($instance_id);
+    public static function hangup(int $instance_id);
 
     /**
      * 审批中断
      * @param int $instance_id 实例ID
      */
-    public static function interrupt($instance_id);
+    public static function interrupt(int $instance_id);
 
     /**
      * 审批取消
      * @param int $instance_id 实例ID
      */
-    public static function cancel($instance_id);
+    public static function cancel(int $instance_id);
 }

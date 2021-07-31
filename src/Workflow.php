@@ -19,7 +19,7 @@ class Workflow
     {
         $db_type = $config['db']['type'];
         $db_config = $config['db']['config'];
-        $db_mode = isset($config['db']['mode']) ? $config['db']['mode'] : null;
+        $db_mode = $config['db']['mode'] ?? null;
         new Db($db_type, $db_config, $db_mode);
     }
 

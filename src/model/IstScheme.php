@@ -2,11 +2,11 @@
 
 namespace fize\workflow\model;
 
-use RuntimeException;
-use fize\misc\Preg;
+use fize\workflow\Action;
 use fize\workflow\Db;
-use fize\workflow\SchemeInterface;
 use fize\workflow\NodeInterface;
+use fize\workflow\SchemeInterface;
+use RuntimeException;
 
 /**
  * 实例
@@ -52,13 +52,13 @@ class IstScheme
 
     /**
      * 创建
-     * @param string $name        名称
-     * @param int    $scheme_id   方案ID
-     * @param array  $fields      传入的表单参数数组
-     * @param int    $instance_id 实例ID，指定该参数时表示重新提交
+     * @param string   $name        名称
+     * @param int      $scheme_id   方案ID
+     * @param array    $fields      传入的表单参数数组
+     * @param int|null $instance_id 实例ID，指定该参数时表示重新提交
      * @return array ['instance_id' => $instance_id, 'submit_id' => $submit_id]
      */
-    public static function submit($name, $scheme_id, $fields, $instance_id = null)
+    public static function submit(string $name, int $scheme_id, array $fields, int $instance_id = null): array
     {
         Db::startTrans();
 
@@ -89,7 +89,7 @@ class IstScheme
                 throw new RuntimeException("字段{$n}必须填写");
             }
             if ($field['regex_match']) {
-                if (!Preg::match($field['regex_match'], $v)) {
+                if (!preg_match($field['regex_match'], $v)) {
                     Db::rollback();
                     throw new RuntimeException("字段{$n}不符合规则");
                 }
@@ -115,7 +115,7 @@ class IstScheme
             'distribute_time' => date('Y-m-d H:i:s'),
             'action_id'       => 0,
             'action_name'     => "第{$submit_times}次提交",
-            'action_type'     => IstAction::ACTION_TYPE_SUBMIT,
+            'action_type'     => Action::TYPE_SUBMIT,
             'action_time'     => date('Y-m-d H:i:s')
         ];
         Db::table('workflow_operation')->insert($data_operation);
@@ -135,7 +135,7 @@ class IstScheme
      * 开始
      * @param int $instance_id 实例ID
      */
-    public static function start($instance_id)
+    public static function start(int $instance_id)
     {
         $submit_id = Db::table('workflow_submit')->where(['instance_id' => $instance_id])->value('id');
         $instance = Db::table('workflow_instance')->where(['id' => $instance_id])->find();
@@ -157,22 +157,22 @@ class IstScheme
 
     /**
      * 重置到最开始节点
-     * @param int $instance_id 实例ID
-     * @param int $submit_id   提交ID，不指定则为原提交ID
+     * @param int      $instance_id 实例ID
+     * @param int|null $submit_id   提交ID，不指定则为原提交ID
      */
-    public static function reset($instance_id, $submit_id = null)
+    public static function reset(int $instance_id, int $submit_id = null)
     {
         Db::startTrans();
         try {
             //忽略之前所有未操作
             $map = [
                 ['instance_id', '=', $instance_id],
-                ['action_type', '=', IstAction::ACTION_TYPE_UNEXECUTED]
+                ['action_type', '=', Action::TYPE_UNEXECUTED]
             ];
             $data = [
                 'action_id'   => 0,
                 'action_name' => '无需操作',
-                'action_type' => IstAction::ACTION_TYPE_DISUSE,
+                'action_type' => Action::TYPE_DISUSE,
                 'action_time' => date('Y-m-d H:i:s')
             ];
             Db::table('workflow_operation')->where($map)->update($data);
@@ -222,7 +222,7 @@ class IstScheme
      * 审批通过
      * @param int $instance_id 方案实例ID
      */
-    public static function adopt($instance_id)
+    public static function adopt(int $instance_id)
     {
         $data_instance = [
             'status'    => IstScheme::STATUS_ADOPT,
@@ -243,7 +243,7 @@ class IstScheme
      * 审批否决
      * @param int $instance_id 实例ID
      */
-    public static function reject($instance_id)
+    public static function reject(int $instance_id)
     {
         $data = [
             'status'    => IstScheme::STATUS_REJECT,
@@ -264,7 +264,7 @@ class IstScheme
      * 审批退回
      * @param int $instance_id 实例ID
      */
-    public static function goback($instance_id)
+    public static function goback(int $instance_id)
     {
         $data = [
             'status'    => IstScheme::STATUS_GOBACK,
@@ -285,7 +285,7 @@ class IstScheme
      * 审批挂起
      * @param int $instance_id 实例ID
      */
-    public static function hangup($instance_id)
+    public static function hangup(int $instance_id)
     {
         $data = [
             'status'    => IstScheme::STATUS_HANGUP,
@@ -306,7 +306,7 @@ class IstScheme
      * 审批中断
      * @param int $instance_id 实例ID
      */
-    public static function interrupt($instance_id)
+    public static function interrupt(int $instance_id)
     {
         $data = [
             'status'    => IstScheme::STATUS_INTERRUPT,
@@ -327,16 +327,16 @@ class IstScheme
      * 审批取消
      * @param int $instance_id 实例ID
      */
-    public static function cancel($instance_id)
+    public static function cancel(int $instance_id)
     {
         $map = [
             'instance_id' => $instance_id,
-            'action_type' => IstAction::ACTION_TYPE_UNEXECUTED
+            'action_type' => Action::TYPE_UNEXECUTED
         ];
         $data_operation = [
             'action_id'   => 0,
             'action_name' => '已取消',
-            'action_type' => IstAction::ACTION_TYPE_CANCEL,
+            'action_type' => Action::TYPE_CANCEL,
             'action_time' => date('Y-m-d H:i:s')
         ];
         Db::table('workflow_operation')->where($map)->update($data_operation);
@@ -360,10 +360,10 @@ class IstScheme
      * 继续执行方案实例工作流
      * @param int $instance_id 实例ID
      */
-    public static function goon($instance_id)
+    public static function goon(int $instance_id)
     {
         $current_operation = Db::table('workflow_operation')->where(['instance_id' => $instance_id])->order(['create_time' => 'DESC'])->find();
-        if ($current_operation['action_type'] != IstAction::ACTION_TYPE_ADOPT) {
+        if ($current_operation['action_type'] != Action::TYPE_ADOPT) {
             throw new RuntimeException('goon操作仅允许最后操作节点为通过！');
         }
 
@@ -388,13 +388,13 @@ class IstScheme
 
     /**
      * 任意追加符合要求的操作
-     * @param int  $instance_id 实例ID
-     * @param int  $node_id     节点ID
-     * @param int  $user_id     指定工作流用户ID，默认不指定
-     * @param bool $notice      是否发送提醒
+     * @param int      $instance_id 实例ID
+     * @param int      $node_id     节点ID
+     * @param int|null $user_id     指定工作流用户ID，默认不指定
+     * @param bool     $notice      是否发送提醒
      * @return int 返回操作ID
      */
-    public function append($instance_id, $node_id, $user_id = null, $notice = true)
+    public function append(int $instance_id, int $node_id, int $user_id = null, bool $notice = true): int
     {
         $current_operation = Db::table('workflow_operation')->where(['instance_id' => $instance_id])->order(['create_time' => 'DESC'])->find();
         $node = Db::table('workflow_node')->where(['id' => $node_id])->find();
@@ -408,7 +408,7 @@ class IstScheme
      * @param bool $original_user 是否分配给原操作者，默认true
      * @return int 返回操作ID
      */
-    public static function again($instance_id, $original_user = true)
+    public static function again(int $instance_id, bool $original_user = true): int
     {
         $last_operation = Db::table('workflow_operation')->where(['instance_id' => $instance_id])->order(['create_time' => 'DESC'])->find();
 
@@ -428,13 +428,13 @@ class IstScheme
      * @param int $instance_id 实例ID
      * @return array
      */
-    public static function getProcess($instance_id)
+    public static function getProcess(int $instance_id): array
     {
         $instance = Db::table('workflow_instance')->where(['id' => $instance_id])->find();
         $last_operation = Db::table('workflow_operation')
             ->where([
                 'instance_id' => $instance['id'],
-                'action_type' => ['<>', IstAction::ACTION_TYPE_SUBMIT]
+                'action_type' => ['<>', Action::TYPE_SUBMIT]
             ])
             ->order(['create_time' => 'DESC'])
             ->find();

@@ -14,7 +14,7 @@ class Role
      * 取得所有角色
      * @return array
      */
-    public static function getList()
+    public static function getList(): array
     {
         $rows = Db::table('workflow_role')
             ->alias('t_role')
@@ -30,7 +30,7 @@ class Role
      * @param int $id 角色ID
      * @return array
      */
-    public static function getOne($id)
+    public static function getOne(int $id): array
     {
         $row = Db::table('workflow_role')->where(['id' => $id])->find();
         return $row;
@@ -42,7 +42,7 @@ class Role
      * @param int    $pid  指定上级角色ID
      * @return int 新增角色ID
      */
-    public static function add($name, $pid = 0)
+    public static function add(string $name, int $pid = 0): int
     {
         $data = [
             'pid'  => $pid,
@@ -55,12 +55,12 @@ class Role
 
     /**
      * 编辑
-     * @param int    $id   角色ID
-     * @param string $name 名称
-     * @param int    $pid  指定上级角色ID
+     * @param int         $id   角色ID
+     * @param string|null $name 名称
+     * @param int|null    $pid  指定上级角色ID
      * @return bool
      */
-    public static function edit($id, $name = null, $pid = null)
+    public static function edit(int $id, string $name = null, int $pid = null): bool
     {
         $data = [
             'update_on' => date('Y-m-d H:i:s')
@@ -73,7 +73,7 @@ class Role
         }
 
         $result = Db::table('workflow_role')->where(['id' => $id])->update($data);
-        return $result ? true : false;
+        return (bool)$result;
     }
 
     /**
@@ -81,7 +81,7 @@ class Role
      * @param int $id 角色ID
      * @return bool
      */
-    public static function delete($id)
+    public static function delete(int $id): bool
     {
         $child = Db::table('workflow_role')->where(['pid' => $id])->find();
         if ($child) {

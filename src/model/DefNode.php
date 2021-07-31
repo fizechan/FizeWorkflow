@@ -15,7 +15,7 @@ class DefNode
      * @param int $def_scheme_id 方案ID
      * @return array 返回所有节点，以层级信息分布
      */
-    public static function getListBySchemeId($def_scheme_id)
+    public static function getListBySchemeId(int $def_scheme_id): array
     {
         $rows = Db::table('workflow_def_node')
             ->where(['def_scheme_id' => $def_scheme_id])
@@ -33,7 +33,7 @@ class DefNode
      * @param int $def_node_id 节点ID
      * @return array
      */
-    public static function previous($def_node_id)
+    public static function previous(int $def_node_id): array
     {
         $node = Db::table('workflow_def_node')->where(['id' => $def_node_id])->find();
         $rows = Db::table('workflow_def_node')
@@ -51,7 +51,7 @@ class DefNode
      * @param int   $def_scheme_id 方案ID
      * @param array $levels_nodes  以层级信息分布的待设置的所有节点
      */
-    public static function build($def_scheme_id, $levels_nodes)
+    public static function build(int $def_scheme_id, array $levels_nodes)
     {
         Db::table('workflow_def_node')->where(['def_scheme_id' => $def_scheme_id])->delete();
         $datas = [];
@@ -73,7 +73,7 @@ class DefNode
      * @param int $def_node_id 节点ID
      * @todo 需要添加软删除功能
      */
-    public static function delete($def_node_id)
+    public static function delete(int $def_node_id)
     {
         $ist_action_ids = Db::table('workflow_ist_action')
             ->where(['def_node_id' => $def_node_id])
