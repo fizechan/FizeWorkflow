@@ -1,6 +1,6 @@
 <?php
 
-namespace fize\workflow;
+namespace Fize\Workflow;
 
 /**
  * 操作

@@ -1,9 +1,9 @@
 <?php
 
-namespace fize\workflow\model;
+namespace Fize\Workflow\Model;
 
-use fize\workflow\Action;
-use fize\workflow\Db;
+use Fize\Workflow\Action;
+use Fize\Workflow\Db;
 use RuntimeException;
 
 /**

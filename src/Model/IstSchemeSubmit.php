@@ -1,10 +1,10 @@
 <?php
 
-namespace fize\workflow\model;
+namespace Fize\Workflow\Model;
 
-use fize\crypt\Json;
-use fize\workflow\Db;
-use fize\workflow\SchemeInterface;
+use Fize\Crypt\Json;
+use Fize\Workflow\Db;
+use Fize\Workflow\SchemeInterface;
 
 /**
  * 提交

@@ -1,8 +1,8 @@
 <?php
 
-namespace fize\workflow\model;
+namespace Fize\Workflow\Model;
 
-use fize\workflow\Db;
+use Fize\Workflow\Db;
 
 /**
  * 定义：节点

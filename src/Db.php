@@ -1,9 +1,9 @@
 <?php
 
-namespace fize\workflow;
+namespace Fize\Workflow;
 
-use fize\database\core\Db as Driver;
-use fize\database\Db as FizeDb;
+use Fize\Database\Core\Db as Driver;
+use Fize\Database\Db as FizeDb;
 
 /**
  * 数据库

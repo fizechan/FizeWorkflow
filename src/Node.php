@@ -1,6 +1,6 @@
 <?php
 
-namespace fize\workflow;
+namespace Fize\Workflow;
 
 /**
  * 内置节点定义
