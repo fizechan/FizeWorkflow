@@ -1,6 +1,6 @@
 <?php
 
-namespace Fize\Workflow\Model;
+namespace Fize\Workflow\Define;
 
 use Fize\Crypt\Json;
 use Fize\Workflow\Db;
@@ -9,7 +9,7 @@ use Fize\Workflow\Scheme as WorkflowScheme;
 /**
  * 方案
  */
-class DefScheme
+class Scheme
 {
 
     /**

@@ -1,8 +1,8 @@
 <?php
 
-namespace Fize\Workflow\Model;
+namespace Fize\Workflow\Instance;
 
-use Fize\Workflow\Action;
+use Fize\Workflow\Action as Common;
 use Fize\Workflow\Db;
 use Fize\Workflow\NodeInterface;
 use Fize\Workflow\SchemeInterface;
@@ -11,7 +11,7 @@ use RuntimeException;
 /**
  * 模型：操作记录
  */
-class IstAction extends Action
+class Action extends Common
 {
 
     /**

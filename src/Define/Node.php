@@ -1,13 +1,13 @@
 <?php
 
-namespace Fize\Workflow\Model;
+namespace Fize\Workflow\Define;
 
 use Fize\Workflow\Db;
 
 /**
  * 定义：节点
  */
-class DefNode
+class Node
 {
 
     /**

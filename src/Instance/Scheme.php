@@ -1,6 +1,6 @@
 <?php
 
-namespace Fize\Workflow\Model;
+namespace Fize\Workflow\Instance;
 
 use Fize\Workflow\Action;
 use Fize\Workflow\Db;
@@ -13,7 +13,7 @@ use RuntimeException;
  *
  * 【实例】是【方案】的实例化表现
  */
-class IstScheme
+class Scheme
 {
     /**
      * 状态：执行中
@@ -70,7 +70,7 @@ class IstScheme
             $data_instance = [
                 'scheme_id' => $scheme_id,
                 'name'      => $name,
-                'status'    => IstScheme::STATUS_EXECUTING,
+                'status'    => Scheme::STATUS_EXECUTING,
                 'is_finish' => 0
             ];
             $instance_id = Db::table('workflow_instance')->insertGetId($data_instance);
@@ -150,7 +150,7 @@ class IstScheme
              */
             $node = $lv1node['class'];
             if ($node::access($instance_id, 0, $lv1node['id'])) {
-                IstAction::create($submit_id, $lv1node['id']);
+                Action::create($submit_id, $lv1node['id']);
             }
         }
     }
@@ -189,7 +189,7 @@ class IstScheme
             Db::table('workflow_submit')->where($map)->update(['is_finish' => 1]);
 
             $data_instance = [
-                'status'      => IstScheme::STATUS_EXECUTING,
+                'status'      => Scheme::STATUS_EXECUTING,
                 'is_finish'   => 0,
                 'update_time' => date('Y-m-d H:i:s')
             ];
@@ -209,7 +209,7 @@ class IstScheme
                  */
                 $node = $lv1node['class'];
                 if ($node::access($instance_id, 0, $lv1node['id'])) {
-                    IstAction::create($submit_id, $lv1node['id']);
+                    Action::create($submit_id, $lv1node['id']);
                 }
             }
         } catch (RuntimeException $e) {
@@ -225,7 +225,7 @@ class IstScheme
     public static function adopt(int $instance_id)
     {
         $data_instance = [
-            'status'    => IstScheme::STATUS_ADOPT,
+            'status'    => Scheme::STATUS_ADOPT,
             'is_finish' => 1
         ];
         Db::table('workflow_instance')->where(['id' => $instance_id])->update($data_instance);
@@ -246,7 +246,7 @@ class IstScheme
     public static function reject(int $instance_id)
     {
         $data = [
-            'status'    => IstScheme::STATUS_REJECT,
+            'status'    => Scheme::STATUS_REJECT,
             'is_finish' => 1
         ];
         Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
@@ -267,7 +267,7 @@ class IstScheme
     public static function goback(int $instance_id)
     {
         $data = [
-            'status'    => IstScheme::STATUS_GOBACK,
+            'status'    => Scheme::STATUS_GOBACK,
             'is_finish' => 0
         ];
         Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
@@ -288,7 +288,7 @@ class IstScheme
     public static function hangup(int $instance_id)
     {
         $data = [
-            'status'    => IstScheme::STATUS_HANGUP,
+            'status'    => Scheme::STATUS_HANGUP,
             'is_finish' => 0
         ];
         Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
@@ -309,7 +309,7 @@ class IstScheme
     public static function interrupt(int $instance_id)
     {
         $data = [
-            'status'    => IstScheme::STATUS_INTERRUPT,
+            'status'    => Scheme::STATUS_INTERRUPT,
             'is_finish' => 0
         ];
         Db::table('workflow_instance')->where(['id' => $instance_id])->update($data);
@@ -342,7 +342,7 @@ class IstScheme
         Db::table('workflow_operation')->where($map)->update($data_operation);
 
         $data_instance = [
-            'status'    => IstScheme::STATUS_CANCEL,
+            'status'    => Scheme::STATUS_CANCEL,
             'is_finish' => 1
         ];
         Db::table('workflow_instance')->where(['id' > $instance_id])->update($data_instance);
@@ -380,7 +380,7 @@ class IstScheme
                  */
                 $node_class = $next_node['class'];
                 if ($node_class::access($instance_id, 0, $next_node['id'])) {
-                    IstAction::create($current_operation['submit_id'], $next_node['id']);
+                    Action::create($current_operation['submit_id'], $next_node['id']);
                 }
             }
         }
@@ -399,7 +399,7 @@ class IstScheme
         $current_operation = Db::table('workflow_operation')->where(['instance_id' => $instance_id])->order(['create_time' => 'DESC'])->find();
         $node = Db::table('workflow_node')->where(['id' => $node_id])->find();
 
-        return IstAction::create($current_operation['submit_id'], $node['id'], $user_id, $notice);
+        return Action::create($current_operation['submit_id'], $node['id'], $user_id, $notice);
     }
 
     /**
@@ -417,9 +417,9 @@ class IstScheme
         }
 
         if ($original_user) {
-            return IstAction::create($last_operation['submit_id'], $last_operation['node_id'], $last_operation['user_id']);
+            return Action::create($last_operation['submit_id'], $last_operation['node_id'], $last_operation['user_id']);
         } else {
-            return IstAction::create($last_operation['submit_id'], $last_operation['node_id']);
+            return Action::create($last_operation['submit_id'], $last_operation['node_id']);
         }
     }
 

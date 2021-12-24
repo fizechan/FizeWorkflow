@@ -1,6 +1,6 @@
 <?php
 
-namespace Fize\Workflow\Model;
+namespace Fize\Workflow\Instance;
 
 use Fize\Crypt\Json;
 use Fize\Workflow\Db;
@@ -11,7 +11,7 @@ use Fize\Workflow\SchemeInterface;
  *
  * 单个【实例】可以有多个【提交】
  */
-class IstSchemeSubmit
+class SchemeSubmit
 {
 
     /**

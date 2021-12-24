@@ -1,6 +1,6 @@
 <?php
 
-namespace Fize\Workflow\Model;
+namespace Fize\Workflow\Define;
 
 use Fize\Crypt\Json;
 use Fize\Workflow\Db;
@@ -10,7 +10,7 @@ use RuntimeException;
 /**
  * 方案-字段定义
  */
-class DefSchemeField
+class SchemeField
 {
 
     /**

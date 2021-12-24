@@ -1,6 +1,6 @@
 <?php
 
-namespace Fize\Workflow\Model;
+namespace Fize\Workflow\Define;
 
 use Fize\Workflow\Action;
 use Fize\Workflow\Db;
@@ -9,7 +9,7 @@ use RuntimeException;
 /**
  * 动作
  */
-class DefNodeAction extends Action
+class NodeAction extends Action
 {
 
     /**
