@@ -14,9 +14,9 @@
     }
   },
   "require": {
-    "php": ">=7.0.0",
-    "fize/crypt": "^4.0.0",
-    "fize/database": "^4.0.0"
+    "php": ">=7.2.0",
+    "fize/codec": "*",
+    "fize/database": "*"
   },
   "autoload-dev": {
     "psr-4": {
