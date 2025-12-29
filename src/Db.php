@@ -30,9 +30,9 @@ class Db
 
     /**
      * 执行一个SQL语句并返回相应结果
-     * @param string   $sql      SQL语句，支持原生的pdo问号预处理
-     * @param array    $params   可选的绑定参数
-     * @param callable $callback 如果定义该记录集回调函数则不返回数组而直接进行循环回调
+     * @param string        $sql      SQL语句，支持原生的pdo问号预处理
+     * @param array         $params   可选的绑定参数
+     * @param callable|null $callback 如果定义该记录集回调函数则不返回数组而直接进行循环回调
      * @return array 返回数组
      */
     public static function query(string $sql, array $params = [], callable $callback = null): array

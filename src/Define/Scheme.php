@@ -2,7 +2,7 @@
 
 namespace Fize\Workflow\Define;
 
-use Fize\Crypt\Json;
+use Fize\Codec\Json;
 use Fize\Workflow\Db;
 use Fize\Workflow\Scheme as WorkflowScheme;
 
