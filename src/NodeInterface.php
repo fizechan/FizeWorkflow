@@ -9,6 +9,12 @@ interface NodeInterface
 {
 
     /**
+     * 返回节点所属的方案
+     * @return SchemeInterface
+     */
+    public function getScheme(): SchemeInterface;
+
+    /**
      * 判断节点准入条件
      * @param int $instance_id       工作流实例ID
      * @param int $prev_operation_id 前一个操作ID,为0表示没有前操作ID

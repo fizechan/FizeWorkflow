@@ -8,6 +8,8 @@ namespace Fize\Workflow;
 interface SchemeInterface
 {
 
+    public function getForm();
+
     /**
      * 返回提交的差异字段
      *
