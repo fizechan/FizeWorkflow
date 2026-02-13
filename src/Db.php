@@ -8,6 +8,7 @@ use Fize\Database\Db as FizeDb;
 /**
  * 数据库
  * @internal 内部使用
+ * @todo 准备移除。
  */
 class Db
 {

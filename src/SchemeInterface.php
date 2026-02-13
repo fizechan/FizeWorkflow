@@ -8,7 +8,18 @@ namespace Fize\Workflow;
 interface SchemeInterface
 {
 
-    public function getForm();
+    /**
+     * 获取表单定义
+     * @return array
+     */
+    public function formDefinition(): array;
+
+    /**
+     * 获取表单数据
+     * @param int $instance_id 实例ID
+     * @return array
+     */
+    public function formData(int $instance_id): array;
 
     /**
      * 返回提交的差异字段
@@ -47,6 +58,7 @@ interface SchemeInterface
 
     /**
      * 审批中断
+     * @todo 改名为suspend？
      * @param int $instance_id 实例ID
      */
     public static function interrupt(int $instance_id);
